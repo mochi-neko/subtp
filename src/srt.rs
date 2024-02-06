@@ -1,3 +1,5 @@
+//! SubRip Subtitle format (`.srt`) structure.
+
 use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
 use std::ops::{Add, Sub};
@@ -15,8 +17,7 @@ pub struct SubRip {
 impl SubRip {
     /// Parses the SubRip Subtitle format from the given text.
     pub fn parse(text: &str) -> ParseResult<Self> {
-        str_parser::srt(text)
-            .map_err(|err| err.into())
+        str_parser::srt(text).map_err(|err| err.into())
     }
 
     /// Renders the text from the SubRip Subtitle format.
@@ -47,7 +48,11 @@ impl Display for SubRip {
         f: &mut Formatter<'_>,
     ) -> std::fmt::Result {
         let subtitles_len = self.subtitles.len();
-        for (i, subtitle) in self.subtitles.iter().enumerate() {
+        for (i, subtitle) in self
+            .subtitles
+            .iter()
+            .enumerate()
+        {
             if i + 1 < subtitles_len {
                 write!(f, "{}\n", subtitle)?;
             } else {
@@ -289,24 +294,22 @@ This is a test.
     #[test]
     fn render() {
         let srt = SubRip {
-            subtitles: vec![
-                SrtSubtitle {
-                    sequence: 1,
-                    start: SrtTimestamp {
-                        hours: 0,
-                        minutes: 0,
-                        seconds: 1,
-                        milliseconds: 0,
-                    },
-                    end: SrtTimestamp {
-                        hours: 0,
-                        minutes: 0,
-                        seconds: 2,
-                        milliseconds: 0,
-                    },
-                    text: vec!["Hello, world!".to_string()],
+            subtitles: vec![SrtSubtitle {
+                sequence: 1,
+                start: SrtTimestamp {
+                    hours: 0,
+                    minutes: 0,
+                    seconds: 1,
+                    milliseconds: 0,
                 },
-            ],
+                end: SrtTimestamp {
+                    hours: 0,
+                    minutes: 0,
+                    seconds: 2,
+                    milliseconds: 0,
+                },
+                text: vec!["Hello, world!".to_string()],
+            }],
         };
         let expected = r#"1
 00:00:01,000 --> 00:00:02,000

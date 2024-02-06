@@ -1,7 +1,6 @@
-pub(crate) use srt_parser::multiline;
+//! SubRip Subtitle format (`.srt`) parser.
+
 pub(crate) use srt_parser::srt;
-pub(crate) use srt_parser::subtitle;
-pub(crate) use srt_parser::timestamp;
 
 peg::parser! {
     /// The parser for SubRip Subtitle format.
@@ -9,36 +8,63 @@ peg::parser! {
         use crate::srt::SrtTimestamp;
         use crate::srt::SubRip;
         use crate::srt::SrtSubtitle;
-        use regex::Regex;
+
+        /// Whitespace.
+        rule whitespace() = [' ' | '\t']
 
         /// Zero or more whitespaces.
-        rule whitespaces() = quiet!{ [' ' | '\t']* }
+        pub(crate) rule whitespaces() = quiet!{ whitespace()* }
+
+        /// One or more whitespaces.
+        pub(crate) rule some_whitespaces() = whitespace()+
 
         /// Newline.
-        rule newline() = "\r\n" / "\n" / "\r"
+        pub(crate) rule newline() = "\r\n" / "\n" / "\r"
+
+        /// Zero or more newlines.
+        pub(crate) rule newlines() = quiet!{ newline()* }
+
+        /// One or more newlines.
+        pub(crate) rule some_newlines() = newline()+
+
+        /// Whitespace or newline.
+        pub(crate) rule whitespace_or_newline() = [' ' | '\t' | '\r' | '\n']
 
         /// Zero or more whitespaces or newlines.
-        rule whitespaces_or_newlines() = quiet!{ [' ' | '\t' | '\r' | '\n']* }
+        pub(crate) rule whitespaces_or_newlines() = quiet!{ whitespace_or_newline()* }
+
+        /// One or more whitespaces or one newline.
+        pub(crate) rule some_whitespaces_or_newline() = some_whitespaces() / newline()
 
         /// One or more whitespaces or newlines.
-        rule some_whitespaces_or_newlines() = quiet!{ [' ' | '\t' | '\r' | '\n']+ }
+        pub(crate) rule some_whitespaces_or_newlines() = whitespace_or_newline()+
 
         /// Any-digit number.
-        rule number() -> u32
+        pub(crate) rule number() -> u32
             = n:$(['0'..='9']+) {?
                 n.parse().or(Err("number"))
             }
 
         /// Two-digit number.
-        rule two_number() -> u8
+        pub(crate) rule two_number() -> u8
             = n:$(['0'..='9']['0'..='9']) {?
                 n.parse().or(Err("two-digit number"))
             }
 
         /// Three-digit number.
-        rule three_number() -> u16
+        pub(crate) rule three_number() -> u16
             = n:$(['0'..='9']['0'..='9']['0'..='9']) {?
                 n.parse().or(Err("three-digit number"))
+            }
+
+        /// Multiple lines block of text.
+        pub(crate) rule multiline() -> Vec<String>
+            = !whitespace_or_newline() lines:$((!newline() [_])+ newline()) ** ()
+            {
+                lines
+                    .iter()
+                    .map(|l| l.to_string().trim().to_string())
+                    .collect()
             }
 
         /// Timestamp.
@@ -53,22 +79,10 @@ peg::parser! {
                 }
             }
 
-        /// Multiple lines block of text.
-        pub(crate) rule multiline() -> Vec<String>
-            = !newline() t:$((!(newline() newline()) [_])*)
-            {
-                Regex::new(r"\r\n|\n|\r")
-                    .unwrap()
-                    .split(t)
-                    .map(|line| line.trim().to_string())
-                    .filter(|line| !line.is_empty())
-                    .collect()
-            }
-
         /// Single subtitle entry.
         pub(crate) rule subtitle() -> SrtSubtitle
             = whitespaces() sequence:number() whitespaces() newline()
-                whitespaces() start:timestamp() " --> " end:timestamp() whitespaces() newline()
+                whitespaces() start:timestamp() whitespaces() "-->" whitespaces() end:timestamp() whitespaces() newline()
                 whitespaces() text:multiline()
             {
                 SrtSubtitle { sequence, start, end, text }
@@ -88,11 +102,12 @@ peg::parser! {
 #[cfg(test)]
 mod test {
     use crate::srt::*;
+    use super::srt_parser;
 
     #[test]
     fn parse_timestamp() {
         assert_eq!(
-            super::timestamp("00:00:00,000").unwrap(),
+            srt_parser::timestamp("00:00:00,000").unwrap(),
             SrtTimestamp {
                 hours: 0,
                 minutes: 0,
@@ -101,7 +116,7 @@ mod test {
             }
         );
         assert_eq!(
-            super::timestamp("00:00:01,000").unwrap(),
+            srt_parser::timestamp("00:00:01,000").unwrap(),
             SrtTimestamp {
                 hours: 0,
                 minutes: 0,
@@ -110,7 +125,7 @@ mod test {
             }
         );
         assert_eq!(
-            super::timestamp("00:01:00,000").unwrap(),
+            srt_parser::timestamp("00:01:00,000").unwrap(),
             SrtTimestamp {
                 hours: 0,
                 minutes: 1,
@@ -119,7 +134,7 @@ mod test {
             }
         );
         assert_eq!(
-            super::timestamp("01:00:00,000").unwrap(),
+            srt_parser::timestamp("01:00:00,000").unwrap(),
             SrtTimestamp {
                 hours: 1,
                 minutes: 0,
@@ -128,7 +143,7 @@ mod test {
             }
         );
         assert_eq!(
-            super::timestamp("00:00:00,001").unwrap(),
+            srt_parser::timestamp("00:00:00,001").unwrap(),
             SrtTimestamp {
                 hours: 0,
                 minutes: 0,
@@ -138,70 +153,17 @@ mod test {
         );
 
         // Invalid digits.
-        assert!(super::timestamp("000:00:00,000").is_err());
-        assert!(super::timestamp("00:000:00,000").is_err());
-        assert!(super::timestamp("00:00:000,000").is_err());
-        assert!(super::timestamp("00:00:00,0000").is_err());
-        assert!(super::timestamp("00:00:00,00").is_err());
+        assert!(srt_parser::timestamp("000:00:00,000").is_err());
+        assert!(srt_parser::timestamp("00:000:00,000").is_err());
+        assert!(srt_parser::timestamp("00:00:000,000").is_err());
+        assert!(srt_parser::timestamp("00:00:00,0000").is_err());
+        assert!(srt_parser::timestamp("00:00:00,00").is_err());
         // Invalid formats.
-        assert!(super::timestamp("00:00:00,").is_err());
-        assert!(super::timestamp("00:00:00").is_err());
-        assert!(super::timestamp("00:00,000").is_err());
+        assert!(srt_parser::timestamp("00:00:00,").is_err());
+        assert!(srt_parser::timestamp("00:00:00").is_err());
+        assert!(srt_parser::timestamp("00:00,000").is_err());
         // Invalid separators. (like WebVTT)
-        assert!(super::timestamp("00:00:00.000").is_err());
-    }
-
-    #[test]
-    fn parse_multiline() {
-        // Allow single line.
-        assert_eq!(
-            super::multiline("Hello, world!").unwrap(),
-            vec!["Hello, world!".to_string()]
-        );
-        // Allow leading whitespaces.
-        assert_eq!(
-            super::multiline(" Hello, world!").unwrap(),
-            vec!["Hello, world!".to_string()]
-        );
-        // Allow trailing whitespaces.
-        assert_eq!(
-            super::multiline("Hello, world! ").unwrap(),
-            vec!["Hello, world!".to_string()]
-        );
-        // Ignore empty lines.
-        assert_eq!(
-            super::multiline("Hello, world!\n").unwrap(),
-            vec!["Hello, world!".to_string()]
-        );
-        // Allow multiple lines.
-        assert_eq!(
-            super::multiline("Hello, world!\nThis is a test.").unwrap(),
-            vec![
-                "Hello, world!".to_string(),
-                "This is a test.".to_string(),
-            ]
-        );
-        // Allow other newline codes.
-        assert_eq!(
-            super::multiline("Hello, world!\rThis is a test.").unwrap(),
-            vec![
-                "Hello, world!".to_string(),
-                "This is a test.".to_string(),
-            ]
-        );
-        assert_eq!(
-            super::multiline("Hello, world!\r\nThis is a test.").unwrap(),
-            vec![
-                "Hello, world!".to_string(),
-                "This is a test.".to_string(),
-            ]
-        );
-
-        // Prohibit newlines in header.
-        assert!(super::multiline("\nHello, world!").is_err());
-        // Prohibit two or more newlines.
-        assert!(super::multiline("Hello, world!\nThis is a test.\n\n").is_err());
-        assert!(super::multiline("some\ntext\n\nover\nline").is_err());
+        assert!(srt_parser::timestamp("00:00:00.000").is_err());
     }
 
     #[test]
@@ -224,88 +186,101 @@ mod test {
         };
 
         assert_eq!(
-            super::subtitle("1\n00:00:00,000 --> 00:00:01,000\nHello, world!").unwrap(),
-            subtitle
-        );
-
-        // Allow trailing newline.
-        assert_eq!(
-            super::subtitle("1\n00:00:00,000 --> 00:00:01,000\nHello, world!\n").unwrap(),
+            srt_parser::subtitle("1\n00:00:00,000 --> 00:00:01,000\nHello, world!\n")
+                .unwrap(),
             subtitle
         );
 
         // Allow leading and trailing whitespaces.
         assert_eq!(
-            super::subtitle("1 \n00:00:00,000 --> 00:00:01,000 \nHello, world!  ").unwrap(),
+            srt_parser::subtitle(
+                "1 \n00:00:00,000 --> 00:00:01,000 \nHello, world!  \n"
+            )
+            .unwrap(),
             subtitle
         );
 
-        // Allow leading and trailing whitespaces.
-        assert_eq!(super::subtitle(" 1 \n 00:00:00,000 --> 00:00:01,000 \n \tHello, world! \n").unwrap(),
+        // Allow whitespaces.
+        assert_eq!(
+            srt_parser::subtitle(
+                " 1 \n 00:00:00,000  -->  00:00:01,000 \n \tHello, world! \n"
+            )
+            .unwrap(),
+            subtitle
+        );
+
+        // Allow no whitespaces between sequence and timestamp.
+        assert_eq!(srt_parser::subtitle(
+            "1\n00:00:00,000-->00:00:01,000\nHello, world!\n"
+            ).unwrap(),
             subtitle
         );
 
         // Prohibit spaces or new lines in header.
-        assert!(super::subtitle("\n1\n00:00:00,000 --> 00:00:01,000\nHello, world!\n").is_err());
+        assert!(srt_parser::subtitle(
+            "\n1\n00:00:00,000 --> 00:00:01,000\nHello, world!\n"
+        )
+        .is_err());
         // Must be separated by newlines.
-        assert!(super::subtitle("1 00:00:00,000 --> 00:00:01,000 Hello, world!\n").is_err());
+        assert!(srt_parser::subtitle(
+            "1 00:00:00,000 --> 00:00:01,000 Hello, world!\n"
+        )
+        .is_err());
         // Prohibit two or more newlines.
-        assert!(super::subtitle("1\n\n00:00:00,000 --> 00:00:01,000\nHello, world!\n").is_err());
-        assert!(super::subtitle("1\n00:00:00,000 --> 00:00:01,000\n\nHello, world!\n").is_err());
-        assert!(super::subtitle("1\n00:00:00,000 --> 00:00:01,000\nHello, world!\n\n").is_err());
+        assert!(srt_parser::subtitle(
+            "1\n\n00:00:00,000 --> 00:00:01,000\nHello, world!\n"
+        )
+        .is_err());
+        assert!(srt_parser::subtitle(
+            "1\n00:00:00,000 --> 00:00:01,000\n\nHello, world!\n"
+        )
+        .is_err());
+        assert!(srt_parser::subtitle(
+            "1\n00:00:00,000 --> 00:00:01,000\nHello, world!\n\n"
+        )
+        .is_err());
     }
 
     #[test]
     fn parse_srt() {
         let srt = SubRip {
-            subtitles: vec![
-                SrtSubtitle {
-                    sequence: 1,
-                    start: SrtTimestamp {
-                        hours: 0,
-                        minutes: 0,
-                        seconds: 0,
-                        milliseconds: 0,
-                    },
-                    end: SrtTimestamp {
-                        hours: 0,
-                        minutes: 0,
-                        seconds: 1,
-                        milliseconds: 0,
-                    },
-                    text: vec!["Hello, world!".to_string()],
+            subtitles: vec![SrtSubtitle {
+                sequence: 1,
+                start: SrtTimestamp {
+                    hours: 0,
+                    minutes: 0,
+                    seconds: 0,
+                    milliseconds: 0,
                 },
-            ],
+                end: SrtTimestamp {
+                    hours: 0,
+                    minutes: 0,
+                    seconds: 1,
+                    milliseconds: 0,
+                },
+                text: vec!["Hello, world!".to_string()],
+            }],
         };
 
         let text = r#"1
 00:00:00,000 --> 00:00:01,000
 Hello, world!
 "#;
-        assert_eq!(
-            super::srt(text).unwrap(),
-            srt
-        );
+        assert_eq!(srt_parser::srt(text).unwrap(), srt);
 
         let text = r#"
 1
 00:00:00,000 --> 00:00:01,000
 Hello, world!
 "#;
-        assert_eq!(
-            super::srt(text).unwrap(),
-            srt
-        );
+        assert_eq!(srt_parser::srt(text).unwrap(), srt);
 
         let text = r#"1
 00:00:00,000 --> 00:00:01,000
 Hello, world!
 
 "#;
-        assert_eq!(
-            super::srt(text).unwrap(),
-            srt
-        );
+        assert_eq!(srt_parser::srt(text).unwrap(), srt);
 
         let text = r#"
 
@@ -315,16 +290,10 @@ Hello, world!
 
 
 "#;
-        assert_eq!(
-            super::srt(text).unwrap(),
-            srt
-        );
+        assert_eq!(srt_parser::srt(text).unwrap(), srt);
 
         let text = "1 \n00:00:00,000 --> 00:00:01,000 \nHello, world!   \n   ";
-        assert_eq!(
-            super::srt(text).unwrap(),
-            srt
-        );
+        assert_eq!(srt_parser::srt(text).unwrap(), srt);
 
         let srt = SubRip {
             subtitles: vec![
@@ -371,10 +340,7 @@ Hello, world!
 00:00:01,000 --> 00:00:02,000
 This is a test.
 "#;
-        assert_eq!(
-            super::srt(text).unwrap(),
-            srt
-        );
+        assert_eq!(srt_parser::srt(text).unwrap(), srt);
 
         let text = r#"
 1
@@ -385,10 +351,7 @@ Hello, world!
 00:00:01,000 --> 00:00:02,000
 This is a test.
 "#;
-        assert_eq!(
-            super::srt(text).unwrap(),
-            srt
-        );
+        assert_eq!(srt_parser::srt(text).unwrap(), srt);
 
         let text = r#"1
 00:00:00,000 --> 00:00:01,000
@@ -399,10 +362,7 @@ Hello, world!
 This is a test.
 
 "#;
-        assert_eq!(
-            super::srt(text).unwrap(),
-            srt
-        );
+        assert_eq!(srt_parser::srt(text).unwrap(), srt);
 
         let text = r#"
 1
@@ -414,10 +374,7 @@ Hello, world!
 This is a test.
 
 "#;
-        assert_eq!(
-            super::srt(text).unwrap(),
-            srt
-        );
+        assert_eq!(srt_parser::srt(text).unwrap(), srt);
 
         let text = r#"1
 00:00:00,000 --> 00:00:01,000
@@ -430,9 +387,6 @@ This is a test.
 
 
 "#;
-        assert_eq!(
-            super::srt(text).unwrap(),
-            srt
-        );
+        assert_eq!(srt_parser::srt(text).unwrap(), srt);
     }
 }
