@@ -1,10 +1,19 @@
-pub use result::ParseResult;
-pub use error::ParseError;
+//! # subtp
+//! A parser for subtitle files such as the SubRip Subtitle (.srt) and the WebVTT (.vtt).
+//!
+//! See [srt](`crate::srt`) and [vtt](`crate::vtt`) for more information.
 
+// Re-exports.
+pub use error::ParseError;
+pub use result::ParseResult;
+
+// Public modules.
+pub mod srt;
+pub mod vtt;
+
+// Internal modules.
+mod error;
 mod general;
 mod result;
-mod srt;
 mod str_parser;
-mod vtt;
 mod vtt_parser;
-mod error;

@@ -1,3 +1,5 @@
+//! A parser implementation for the WebVTT format.
+
 pub(crate) use vtt_parser::vtt;
 
 peg::parser! {
@@ -692,14 +694,18 @@ mod test {
         assert_eq!(
             vtt_parser::cue_line("line:10%").unwrap(),
             Line::Percentage(
-                Percentage { value: 10.0, },
+                Percentage {
+                    value: 10.0,
+                },
                 None,
             )
         );
         assert_eq!(
             vtt_parser::cue_line("line:10%,end").unwrap(),
             Line::Percentage(
-                Percentage { value: 10.0, },
+                Percentage {
+                    value: 10.0,
+                },
                 Some(LineAlignment::End),
             )
         );
@@ -925,7 +931,7 @@ mod test {
             vtt_parser::cue(
                 "id\n00:00:00.000 --> 00:00:01.000\nHello, world!\n"
             )
-                .unwrap(),
+            .unwrap(),
             VttQue {
                 identifier: Some("id".to_string()),
                 timings: VttTimings {
@@ -1090,21 +1096,27 @@ mod test {
         assert_eq!(
             vtt_parser::header("WEBVTT\ndescription\n").unwrap(),
             VttHeader {
-                description: Some(VttDescription::Below("description\n".to_string()))
+                description: Some(VttDescription::Below(
+                    "description\n".to_string()
+                ))
             }
         );
 
         assert_eq!(
             vtt_parser::header("WEBVTT\nfirst\nsecond\n").unwrap(),
             VttHeader {
-                description: Some(VttDescription::Below("first\nsecond\n".to_string()))
+                description: Some(VttDescription::Below(
+                    "first\nsecond\n".to_string()
+                ))
             }
         );
 
         assert_eq!(
             vtt_parser::header("WEBVTT description\n").unwrap(),
             VttHeader {
-                description: Some(VttDescription::Side("description\n".to_string()))
+                description: Some(VttDescription::Side(
+                    "description\n".to_string()
+                ))
             }
         );
 
@@ -1388,7 +1400,7 @@ mod test {
                     settings: None,
                     payload: vec!["- Never drink liquid nitrogen.".to_string()],
                 }
-                    .into(),
+                .into(),
                 VttQue {
                     identifier: None,
                     timings: VttTimings {
@@ -1411,7 +1423,7 @@ mod test {
                         "- You could die.".to_string(),
                     ],
                 }
-                    .into(),
+                .into(),
             ],
         };
 
@@ -1680,7 +1692,7 @@ What are you waiting for?
 
         let exoected = WebVtt {
             header: VttHeader {
-                description: None
+                description: None,
             },
             blocks: vec![
                 VttQue {
@@ -1701,15 +1713,20 @@ What are you waiting for?
                     },
                     settings: Some(CueSettings {
                         position: Some(Position {
-                            value: Percentage { value: 10.0 },
+                            value: Percentage {
+                                value: 10.0,
+                            },
                             alignment: Some(PositionAlignment::LineLeft),
                         }),
                         align: Some(Alignment::Left),
-                        size: Some(Percentage { value: 35.0 }),
+                        size: Some(Percentage {
+                            value: 35.0,
+                        }),
                         ..Default::default()
                     }),
                     payload: vec!["Where did he go?".to_string()],
-                }.into(),
+                }
+                .into(),
                 VttQue {
                     identifier: None,
                     timings: VttTimings {
@@ -1728,15 +1745,22 @@ What are you waiting for?
                     },
                     settings: Some(CueSettings {
                         position: Some(Position {
-                            value: Percentage { value: 90.0 },
+                            value: Percentage {
+                                value: 90.0,
+                            },
                             alignment: None,
                         }),
                         align: Some(Alignment::Right),
-                        size: Some(Percentage { value: 35.0 }),
+                        size: Some(Percentage {
+                            value: 35.0,
+                        }),
                         ..Default::default()
                     }),
-                    payload: vec!["I think he went down this lane.".to_string()],
-                }.into(),
+                    payload: vec![
+                        "I think he went down this lane.".to_string(),
+                    ],
+                }
+                .into(),
                 VttQue {
                     identifier: None,
                     timings: VttTimings {
@@ -1755,15 +1779,20 @@ What are you waiting for?
                     },
                     settings: Some(CueSettings {
                         position: Some(Position {
-                            value: Percentage { value: 45.0 },
+                            value: Percentage {
+                                value: 45.0,
+                            },
                             alignment: Some(PositionAlignment::LineRight),
                         }),
                         align: Some(Alignment::Center),
-                        size: Some(Percentage { value: 35.0 }),
+                        size: Some(Percentage {
+                            value: 35.0,
+                        }),
                         ..Default::default()
                     }),
                     payload: vec!["What are you waiting for?".to_string()],
-                }.into(),
+                }
+                .into(),
             ],
         };
 

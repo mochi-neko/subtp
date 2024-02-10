@@ -1,3 +1,5 @@
+//! Error types for parsing.
+
 /// The error of parsing.
 #[derive(Debug, thiserror::Error)]
 #[error("Parse error at {location}: expected {expected}")]

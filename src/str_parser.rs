@@ -1,4 +1,4 @@
-//! SubRip Subtitle format (`.srt`) parser.
+//! A parser implementation for the SubRip Subtitle format.
 
 pub(crate) use srt_parser::srt;
 
@@ -107,8 +107,8 @@ peg::parser! {
 
 #[cfg(test)]
 mod test {
-    use crate::srt::*;
     use super::srt_parser;
+    use crate::srt::*;
 
     #[test]
     fn parse_timestamp() {
@@ -192,8 +192,10 @@ mod test {
         };
 
         assert_eq!(
-            srt_parser::subtitle("1\n00:00:00,000 --> 00:00:01,000\nHello, world!\n")
-                .unwrap(),
+            srt_parser::subtitle(
+                "1\n00:00:00,000 --> 00:00:01,000\nHello, world!\n"
+            )
+            .unwrap(),
             subtitle
         );
 
@@ -216,9 +218,11 @@ mod test {
         );
 
         // Allow no whitespaces between sequence and timestamp.
-        assert_eq!(srt_parser::subtitle(
-            "1\n00:00:00,000-->00:00:01,000\nHello, world!\n"
-            ).unwrap(),
+        assert_eq!(
+            srt_parser::subtitle(
+                "1\n00:00:00,000-->00:00:01,000\nHello, world!\n"
+            )
+            .unwrap(),
             subtitle
         );
 

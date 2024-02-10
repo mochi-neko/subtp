@@ -1,4 +1,65 @@
-//! SubRip Subtitle format (`.srt`) structure.
+//! A parser for the SubRip Subtitle (`.srt`) format.
+//!
+//! ## Example
+//! ```
+//! use subtp::srt::SubRip;
+//! use subtp::srt::SrtSubtitle;
+//! use subtp::srt::SrtTimestamp;
+//!
+//! let text = r#"1
+//! 00:00:01,000 --> 00:00:02,000
+//! Hello, world!
+//!
+//! 2
+//! 00:00:03,000 --> 00:00:04,000
+//! This is a sample.
+//! Thank you for your reading.
+//! "#;
+//!
+//! let srt = SubRip::parse(text)?;
+//! assert_eq!(srt, SubRip {
+//!     subtitles: vec![
+//!         SrtSubtitle {
+//!             sequence: 1,
+//!             start: SrtTimestamp {
+//!                 hours: 0,
+//!                 minutes: 0,
+//!                 seconds: 1,
+//!                 milliseconds: 0,
+//!             },
+//!             end: SrtTimestamp {
+//!                 hours: 0,
+//!                 minutes: 0,
+//!                 seconds: 2,
+//!                 milliseconds: 0,
+//!             },
+//!             text: vec!["Hello, world!".to_string()],
+//!         },
+//!         SrtSubtitle {
+//!             sequence: 2,
+//!             start: SrtTimestamp {
+//!                 hours: 0,
+//!                 minutes: 0,
+//!                 seconds: 3,
+//!                 milliseconds: 0,
+//!             },
+//!             end: SrtTimestamp {
+//!                 hours: 0,
+//!                 minutes: 0,
+//!                 seconds: 4,
+//!                 milliseconds: 0,
+//!             },
+//!             text: vec![
+//!                 "This is a sample.".to_string(),
+//!                 "Thank you for your reading.".to_string()
+//!             ],
+//!         },
+//!     ],
+//! });
+//!
+//! let rendered = srt.render();
+//! assert_eq!(rendered, text);
+//! ```
 
 use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
@@ -7,7 +68,7 @@ use std::ops::{Add, Sub};
 use crate::str_parser;
 use crate::ParseResult;
 
-/// The SubRip Subtitle format (`.srt`).
+/// The SubRip Subtitle (`.srt`) format.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct SubRip {
     /// The collection of subtitles.
@@ -300,7 +361,10 @@ This is a test.
             ],
         };
 
-        assert_eq!(SubRip::parse(srt_text).unwrap(), expected);
+        assert_eq!(
+            SubRip::parse(srt_text).unwrap(),
+            expected
+        );
     }
 
     #[test]
@@ -417,40 +481,45 @@ This is a test.
 
         let mut iter = srt.into_iter();
 
-        assert_eq!(iter.next(), Some(SrtSubtitle {
-            sequence: 1,
-            start: SrtTimestamp {
-                hours: 0,
-                minutes: 0,
-                seconds: 1,
-                milliseconds: 0,
-            },
-            end: SrtTimestamp {
-                hours: 0,
-                minutes: 0,
-                seconds: 2,
-                milliseconds: 0,
-            },
-            text: vec!["Hello, world!".to_string()],
-        }));
+        assert_eq!(
+            iter.next(),
+            Some(SrtSubtitle {
+                sequence: 1,
+                start: SrtTimestamp {
+                    hours: 0,
+                    minutes: 0,
+                    seconds: 1,
+                    milliseconds: 0,
+                },
+                end: SrtTimestamp {
+                    hours: 0,
+                    minutes: 0,
+                    seconds: 2,
+                    milliseconds: 0,
+                },
+                text: vec!["Hello, world!".to_string()],
+            })
+        );
 
-        assert_eq!(iter.next(), Some(SrtSubtitle {
-            sequence: 2,
-            start: SrtTimestamp {
-                hours: 0,
-                minutes: 0,
-                seconds: 3,
-                milliseconds: 0,
-            },
-            end: SrtTimestamp {
-                hours: 0,
-                minutes: 0,
-                seconds: 4,
-                milliseconds: 0,
-            },
-            text: vec!["This is a test.".to_string()],
-        }));
-
+        assert_eq!(
+            iter.next(),
+            Some(SrtSubtitle {
+                sequence: 2,
+                start: SrtTimestamp {
+                    hours: 0,
+                    minutes: 0,
+                    seconds: 3,
+                    milliseconds: 0,
+                },
+                end: SrtTimestamp {
+                    hours: 0,
+                    minutes: 0,
+                    seconds: 4,
+                    milliseconds: 0,
+                },
+                text: vec!["This is a test.".to_string()],
+            })
+        );
 
         assert_eq!(iter.next(), None);
     }

@@ -1,3 +1,5 @@
+//! Result types for parsing.
+
 use crate::ParseError;
 
 /// The result of parsing.

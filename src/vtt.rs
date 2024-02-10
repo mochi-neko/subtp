@@ -1,7 +1,75 @@
+//! A parser for the WebVTT (.vtt) format.
+//!
+//! ## Example
+//! ```
+//! use subtp::vtt::WebVtt;
+//! use subtp::vtt::VttQue;
+//! use subtp::vtt::VttTimings;
+//! use subtp::vtt::VttTimestamp;
+//!
+//! let text = r#"WEBVTT
+//!
+//! 00:01.000 --> 00:04.000
+//! - Never drink liquid nitrogen.
+//!
+//! 00:05.000 --> 00:09.000
+//! - It will perforate your stomach.
+//! - You could die.
+//! "#;
+//!
+//! let vtt = WebVtt::parse(text)?;
+//!
+//! assert_eq!(
+//!     vtt,
+//!     WebVtt {
+//!         blocks: vec![
+//!             VttQue {
+//!                 timings: VttTimings {
+//!                     start: VttTimestamp {
+//!                         seconds: 1,
+//!                         ..Default::default()
+//!                     },
+//!                     end: VttTimestamp {
+//!                         seconds: 4,
+//!                         ..Default::default()
+//!                     },
+//!                 },
+//!                 payload: vec!["- Never drink liquid nitrogen.".to_string()],
+//!                 ..Default::default()
+//!             }
+//!             .into(),
+//!             VttQue {
+//!                 timings: VttTimings {
+//!                     start: VttTimestamp {
+//!                         seconds: 5,
+//!                         ..Default::default()
+//!                     },
+//!                     end: VttTimestamp {
+//!                         seconds: 9,
+//!                         ..Default::default()
+//!                     },
+//!                 },
+//!                 payload: vec![
+//!                     "- It will perforate your stomach.".to_string(),
+//!                     "- You could die.".to_string(),
+//!                 ],
+//!                 ..Default::default()
+//!             }
+//!             .into(),
+//!         ],
+//!         ..Default::default()
+//!     }
+//! );
+//!
+//! let rendered = vtt.render();
+//!
+//! assert_eq!(rendered, text);
+//! ```
+
 use std::fmt::Display;
 use std::ops::{Add, Sub};
 
-/// The WebVTT format (`.vtt`).
+/// The WebVTT (`.vtt`) format.
 #[derive(Debug, Clone, PartialEq)]
 pub struct WebVtt {
     /// The header of the WebVTT.
@@ -54,9 +122,7 @@ impl Display for WebVtt {
 impl Iterator for WebVtt {
     type Item = VttBlock;
 
-    fn next(
-        &mut self,
-    ) -> Option<Self::Item> {
+    fn next(&mut self) -> Option<Self::Item> {
         if self.blocks.is_empty() {
             None
         } else {
@@ -74,7 +140,9 @@ pub struct VttHeader {
 
 impl Default for VttHeader {
     fn default() -> Self {
-        Self { description: None }
+        Self {
+            description: None,
+        }
     }
 }
 
@@ -237,7 +305,11 @@ impl Display for VttRegion {
         }
 
         if let Some(viewport_anchor) = self.viewport_anchor {
-            write!(f, "viewportanchor:{}\n", viewport_anchor)?;
+            write!(
+                f,
+                "viewportanchor:{}\n",
+                viewport_anchor
+            )?;
         }
 
         if let Some(scroll) = self.scroll {
@@ -287,7 +359,9 @@ pub struct VttStyle {
 
 impl Default for VttStyle {
     fn default() -> Self {
-        Self { style: String::new() }
+        Self {
+            style: String::new(),
+        }
     }
 }
 
@@ -552,7 +626,9 @@ pub struct Percentage {
 
 impl Default for Percentage {
     fn default() -> Self {
-        Self { value: 0.0 }
+        Self {
+            value: 0.0,
+        }
     }
 }
 
@@ -581,8 +657,12 @@ pub struct Anchor {
 impl Default for Anchor {
     fn default() -> Self {
         Self {
-            x: Percentage { value: 0.0 },
-            y: Percentage { value: 100.0 },
+            x: Percentage {
+                value: 0.0,
+            },
+            y: Percentage {
+                value: 100.0,
+            },
         }
     }
 }
@@ -870,11 +950,10 @@ mod test {
                             ..Default::default()
                         },
                     },
-                    payload: vec![
-                        "- Never drink liquid nitrogen.".to_string(),
-                    ],
+                    payload: vec!["- Never drink liquid nitrogen.".to_string()],
                     ..Default::default()
-                }.into(),
+                }
+                .into(),
                 VttQue {
                     timings: VttTimings {
                         start: VttTimestamp {
@@ -891,7 +970,8 @@ mod test {
                         "- You could die.".to_string(),
                     ],
                     ..Default::default()
-                }.into(),
+                }
+                .into(),
             ],
             ..Default::default()
         };
@@ -914,11 +994,10 @@ mod test {
                             ..Default::default()
                         },
                     },
-                    payload: vec![
-                        "- Never drink liquid nitrogen.".to_string(),
-                    ],
+                    payload: vec!["- Never drink liquid nitrogen.".to_string()],
                     ..Default::default()
-                }.into(),
+                }
+                .into(),
                 VttQue {
                     timings: VttTimings {
                         start: VttTimestamp {
@@ -935,7 +1014,8 @@ mod test {
                         "- You could die.".to_string(),
                     ],
                     ..Default::default()
-                }.into(),
+                }
+                .into(),
             ],
             ..Default::default()
         };
@@ -954,25 +1034,45 @@ mod test {
 
         let vtt = WebVtt {
             header: VttHeader {
-                description: Some(VttDescription::Side("This is a description.".to_string())),
+                description: Some(VttDescription::Side(
+                    "This is a description.".to_string(),
+                )),
             },
             blocks: vec![
                 VttComment::Side("This is a comment.".to_string()).into(),
                 VttRegion {
                     id: Some("region_id".to_string()),
-                    width: Some(Percentage { value: 50.0 }),
+                    width: Some(Percentage {
+                        value: 50.0,
+                    }),
                     lines: Some(3),
-                    region_anchor: Some(Anchor { x: Percentage { value: 50.0 }, y: Percentage { value: 50.0 } }),
-                    viewport_anchor: Some(Anchor { x: Percentage { value: 50.0 }, y: Percentage { value: 50.0 } }),
+                    region_anchor: Some(Anchor {
+                        x: Percentage {
+                            value: 50.0,
+                        },
+                        y: Percentage {
+                            value: 50.0,
+                        },
+                    }),
+                    viewport_anchor: Some(Anchor {
+                        x: Percentage {
+                            value: 50.0,
+                        },
+                        y: Percentage {
+                            value: 50.0,
+                        },
+                    }),
                     scroll: Some(Scroll::Up),
-                }.into(),
+                }
+                .into(),
                 VttStyle {
                     style: r#"video::cue {
   background-image: linear-gradient(to bottom, dimgray, lightgray);
   color: papayawhip;
 }"#
-                        .to_string()
-                }.into(),
+                    .to_string(),
+                }
+                .into(),
                 VttQue {
                     identifier: Some("1".to_string()),
                     timings: VttTimings {
@@ -991,16 +1091,27 @@ mod test {
                     },
                     settings: Some(CueSettings {
                         vertical: Some(Vertical::Lr),
-                        line: Some(Line::Percentage(Percentage { value: 100.0 }, Some(LineAlignment::Center))),
-                        position: Some(Position { value: Percentage { value: 50.0 }, alignment: Some(PositionAlignment::Center) }),
-                        size: Some(Percentage { value: 50.0 }),
+                        line: Some(Line::Percentage(
+                            Percentage {
+                                value: 100.0,
+                            },
+                            Some(LineAlignment::Center),
+                        )),
+                        position: Some(Position {
+                            value: Percentage {
+                                value: 50.0,
+                            },
+                            alignment: Some(PositionAlignment::Center),
+                        }),
+                        size: Some(Percentage {
+                            value: 50.0,
+                        }),
                         align: Some(Alignment::Center),
                         region: Some("region_id".to_string()),
                     }),
-                    payload: vec![
-                        "- Never drink liquid nitrogen.".to_string(),
-                    ],
-                }.into(),
+                    payload: vec!["- Never drink liquid nitrogen.".to_string()],
+                }
+                .into(),
             ],
         };
 
@@ -1045,11 +1156,10 @@ video::cue {
                             ..Default::default()
                         },
                     },
-                    payload: vec![
-                        "- Never drink liquid nitrogen.".to_string(),
-                    ],
+                    payload: vec!["- Never drink liquid nitrogen.".to_string()],
                     ..Default::default()
-                }.into(),
+                }
+                .into(),
                 VttQue {
                     timings: VttTimings {
                         start: VttTimestamp {
@@ -1066,7 +1176,8 @@ video::cue {
                         "- You could die.".to_string(),
                     ],
                     ..Default::default()
-                }.into(),
+                }
+                .into(),
             ],
             ..Default::default()
         };
@@ -1090,23 +1201,29 @@ video::cue {
             ..Default::default()
         }.into()));
 
-        assert_eq!(iter.next(), Some(VttQue {
-            timings: VttTimings {
-                start: VttTimestamp {
-                    seconds: 5,
+        assert_eq!(
+            iter.next(),
+            Some(
+                VttQue {
+                    timings: VttTimings {
+                        start: VttTimestamp {
+                            seconds: 5,
+                            ..Default::default()
+                        },
+                        end: VttTimestamp {
+                            seconds: 9,
+                            ..Default::default()
+                        },
+                    },
+                    payload: vec![
+                        "- It will perforate your stomach.".to_string(),
+                        "- You could die.".to_string(),
+                    ],
                     ..Default::default()
-                },
-                end: VttTimestamp {
-                    seconds: 9,
-                    ..Default::default()
-                },
-            },
-            payload: vec![
-                "- It will perforate your stomach.".to_string(),
-                "- You could die.".to_string(),
-            ],
-            ..Default::default()
-        }.into()));
+                }
+                .into()
+            )
+        );
 
         assert_eq!(iter.next(), None);
     }
@@ -1114,7 +1231,9 @@ video::cue {
     #[test]
     fn display_header() {
         let header = VttHeader {
-            description: Some(VttDescription::Side("This is a description.".to_string())),
+            description: Some(VttDescription::Side(
+                "This is a description.".to_string(),
+            )),
         };
 
         let expected = "WEBVTT This is a description.\n";
@@ -1122,7 +1241,9 @@ video::cue {
         assert_eq!(header.to_string(), expected);
 
         let header = VttHeader {
-            description: Some(VttDescription::Below("This is a description.".to_string())),
+            description: Some(VttDescription::Below(
+                "This is a description.".to_string(),
+            )),
         };
 
         let expected = "WEBVTT\nThis is a description.\n";
@@ -1158,15 +1279,25 @@ video::cue {
             },
             settings: Some(CueSettings {
                 vertical: Some(Vertical::Lr),
-                line: Some(Line::Percentage(Percentage { value: 100.0 }, Some(LineAlignment::Center))),
-                position: Some(Position { value: Percentage { value: 50.0 }, alignment: Some(PositionAlignment::Center) }),
-                size: Some(Percentage { value: 50.0 }),
+                line: Some(Line::Percentage(
+                    Percentage {
+                        value: 100.0,
+                    },
+                    Some(LineAlignment::Center),
+                )),
+                position: Some(Position {
+                    value: Percentage {
+                        value: 50.0,
+                    },
+                    alignment: Some(PositionAlignment::Center),
+                }),
+                size: Some(Percentage {
+                    value: 50.0,
+                }),
                 align: Some(Alignment::Center),
                 region: Some("region".to_string()),
             }),
-            payload: vec![
-                "- Never drink liquid nitrogen.".to_string(),
-            ],
+            payload: vec!["- Never drink liquid nitrogen.".to_string()],
         };
 
         let expected = "1\n00:00:01.000 --> 00:00:04.000 vertical:lr line:100%,center position:50%,center size:50% align:center region:region\n- Never drink liquid nitrogen.\n";
@@ -1190,12 +1321,11 @@ video::cue {
                 },
             },
             settings: None,
-            payload: vec![
-                "- Never drink liquid nitrogen.".to_string(),
-            ],
+            payload: vec!["- Never drink liquid nitrogen.".to_string()],
         };
 
-        let expected = "00:00:01.000 --> 00:00:04.000\n- Never drink liquid nitrogen.\n";
+        let expected =
+            "00:00:01.000 --> 00:00:04.000\n- Never drink liquid nitrogen.\n";
 
         assert_eq!(cue.to_string(), expected);
     }
@@ -1210,14 +1340,17 @@ video::cue {
         let expected = "NOTE\nThis is a comment.\n";
         assert_eq!(comment.to_string(), expected);
 
-        let comment = VttComment::Side("This is a comment.\nacross line.".to_string());
+        let comment =
+            VttComment::Side("This is a comment.\nacross line.".to_string());
         let expected = "NOTE This is a comment.\nacross line.\n";
         assert_eq!(comment.to_string(), expected);
     }
 
     #[test]
     fn display_style() {
-        let style = VttStyle { style: "This is a style.".to_string() };
+        let style = VttStyle {
+            style: "This is a style.".to_string(),
+        };
         let expected = "STYLE\nThis is a style.\n";
         assert_eq!(style.to_string(), expected);
     }
@@ -1226,10 +1359,26 @@ video::cue {
     fn display_region() {
         let region = VttRegion {
             id: Some("region".to_string()),
-            width: Some(Percentage { value: 50.0 }),
+            width: Some(Percentage {
+                value: 50.0,
+            }),
             lines: Some(3),
-            region_anchor: Some(Anchor { x: Percentage { value: 50.0 }, y: Percentage { value: 50.0 } }),
-            viewport_anchor: Some(Anchor { x: Percentage { value: 50.0 }, y: Percentage { value: 50.0 } }),
+            region_anchor: Some(Anchor {
+                x: Percentage {
+                    value: 50.0,
+                },
+                y: Percentage {
+                    value: 50.0,
+                },
+            }),
+            viewport_anchor: Some(Anchor {
+                x: Percentage {
+                    value: 50.0,
+                },
+                y: Percentage {
+                    value: 50.0,
+                },
+            }),
             scroll: Some(Scroll::Up),
         };
         let expected = "REGION\nid:region\nwidth:50%\nlines:3\nregionanchor:50%,50%\nviewportanchor:50%,50%\nscroll:up\n";
@@ -1237,7 +1386,9 @@ video::cue {
 
         let region = VttRegion {
             id: Some("region".to_string()),
-            width: Some(Percentage { value: 50.0 }),
+            width: Some(Percentage {
+                value: 50.0,
+            }),
             lines: None,
             region_anchor: None,
             viewport_anchor: None,
