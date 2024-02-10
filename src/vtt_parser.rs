@@ -1,3 +1,5 @@
+pub(crate) use vtt_parser::vtt;
+
 peg::parser! {
     grammar vtt_parser() for str {
         use crate::vtt::WebVtt;

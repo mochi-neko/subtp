@@ -26,14 +26,6 @@ impl SubRip {
     }
 }
 
-impl Iterator for SubRip {
-    type Item = SrtSubtitle;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.subtitles.pop()
-    }
-}
-
 impl Default for SubRip {
     fn default() -> Self {
         Self {
@@ -47,19 +39,32 @@ impl Display for SubRip {
         &self,
         f: &mut Formatter<'_>,
     ) -> std::fmt::Result {
-        let subtitles_len = self.subtitles.len();
+        let length = self.subtitles.len();
         for (i, subtitle) in self
             .subtitles
             .iter()
             .enumerate()
         {
-            if i + 1 < subtitles_len {
+            if i + 1 < length {
                 write!(f, "{}\n", subtitle)?;
             } else {
                 write!(f, "{}", subtitle)?;
             }
         }
+
         Ok(())
+    }
+}
+
+impl Iterator for SubRip {
+    type Item = SrtSubtitle;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.subtitles.is_empty() {
+            None
+        } else {
+            Some(self.subtitles.remove(0))
+        }
     }
 }
 
@@ -369,6 +374,85 @@ Hello, world!
 This is a test.
 "#;
         assert_eq!(srt.render(), expected);
+    }
+
+    #[test]
+    fn iterator() {
+        let srt = SubRip {
+            subtitles: vec![
+                SrtSubtitle {
+                    sequence: 1,
+                    start: SrtTimestamp {
+                        hours: 0,
+                        minutes: 0,
+                        seconds: 1,
+                        milliseconds: 0,
+                    },
+                    end: SrtTimestamp {
+                        hours: 0,
+                        minutes: 0,
+                        seconds: 2,
+                        milliseconds: 0,
+                    },
+                    text: vec!["Hello, world!".to_string()],
+                },
+                SrtSubtitle {
+                    sequence: 2,
+                    start: SrtTimestamp {
+                        hours: 0,
+                        minutes: 0,
+                        seconds: 3,
+                        milliseconds: 0,
+                    },
+                    end: SrtTimestamp {
+                        hours: 0,
+                        minutes: 0,
+                        seconds: 4,
+                        milliseconds: 0,
+                    },
+                    text: vec!["This is a test.".to_string()],
+                },
+            ],
+        };
+
+        let mut iter = srt.into_iter();
+
+        assert_eq!(iter.next(), Some(SrtSubtitle {
+            sequence: 1,
+            start: SrtTimestamp {
+                hours: 0,
+                minutes: 0,
+                seconds: 1,
+                milliseconds: 0,
+            },
+            end: SrtTimestamp {
+                hours: 0,
+                minutes: 0,
+                seconds: 2,
+                milliseconds: 0,
+            },
+            text: vec!["Hello, world!".to_string()],
+        }));
+
+        assert_eq!(iter.next(), Some(SrtSubtitle {
+            sequence: 2,
+            start: SrtTimestamp {
+                hours: 0,
+                minutes: 0,
+                seconds: 3,
+                milliseconds: 0,
+            },
+            end: SrtTimestamp {
+                hours: 0,
+                minutes: 0,
+                seconds: 4,
+                milliseconds: 0,
+            },
+            text: vec!["This is a test.".to_string()],
+        }));
+
+
+        assert_eq!(iter.next(), None);
     }
 
     #[test]

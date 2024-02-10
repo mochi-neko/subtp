@@ -4,10 +4,22 @@ use std::ops::{Add, Sub};
 /// The WebVTT format (`.vtt`).
 #[derive(Debug, Clone, PartialEq)]
 pub struct WebVtt {
-    /// The header.
+    /// The header of the WebVTT.
     pub header: VttHeader,
     /// The blocks of the WebVTT.
     pub blocks: Vec<VttBlock>,
+}
+
+impl WebVtt {
+    /// Parse the input string as a WebVTT.
+    pub fn parse(input: &str) -> Result<Self, crate::error::ParseError> {
+        crate::vtt_parser::vtt(input).map_err(Into::into)
+    }
+
+    /// Render the WebVTT to a string.
+    pub fn render(&self) -> String {
+        self.to_string()
+    }
 }
 
 impl Default for WebVtt {
@@ -26,11 +38,30 @@ impl Display for WebVtt {
     ) -> std::fmt::Result {
         write!(f, "{}\n", self.header)?;
 
-        for block in &self.blocks {
-            write!(f, "{}\n", block)?;
+        let length = self.blocks.len();
+        for (i, block) in self.blocks.iter().enumerate() {
+            if i + 1 < length {
+                write!(f, "{}\n", block)?;
+            } else {
+                write!(f, "{}", block)?;
+            }
         }
 
         Ok(())
+    }
+}
+
+impl Iterator for WebVtt {
+    type Item = VttBlock;
+
+    fn next(
+        &mut self,
+    ) -> Option<Self::Item> {
+        if self.blocks.is_empty() {
+            None
+        } else {
+            Some(self.blocks.remove(0))
+        }
     }
 }
 
@@ -807,5 +838,412 @@ impl Display for Alignment {
                 write!(f, "right")
             },
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn parse() {
+        let text = r#"WEBVTT
+
+00:01.000 --> 00:04.000
+- Never drink liquid nitrogen.
+
+00:05.000 --> 00:09.000
+- It will perforate your stomach.
+- You could die.
+"#;
+
+        let expected = WebVtt {
+            blocks: vec![
+                VttQue {
+                    timings: VttTimings {
+                        start: VttTimestamp {
+                            seconds: 1,
+                            ..Default::default()
+                        },
+                        end: VttTimestamp {
+                            seconds: 4,
+                            ..Default::default()
+                        },
+                    },
+                    payload: vec![
+                        "- Never drink liquid nitrogen.".to_string(),
+                    ],
+                    ..Default::default()
+                }.into(),
+                VttQue {
+                    timings: VttTimings {
+                        start: VttTimestamp {
+                            seconds: 5,
+                            ..Default::default()
+                        },
+                        end: VttTimestamp {
+                            seconds: 9,
+                            ..Default::default()
+                        },
+                    },
+                    payload: vec![
+                        "- It will perforate your stomach.".to_string(),
+                        "- You could die.".to_string(),
+                    ],
+                    ..Default::default()
+                }.into(),
+            ],
+            ..Default::default()
+        };
+
+        assert_eq!(WebVtt::parse(text).unwrap(), expected);
+    }
+
+    #[test]
+    fn render() {
+        let vtt = WebVtt {
+            blocks: vec![
+                VttQue {
+                    timings: VttTimings {
+                        start: VttTimestamp {
+                            seconds: 1,
+                            ..Default::default()
+                        },
+                        end: VttTimestamp {
+                            seconds: 4,
+                            ..Default::default()
+                        },
+                    },
+                    payload: vec![
+                        "- Never drink liquid nitrogen.".to_string(),
+                    ],
+                    ..Default::default()
+                }.into(),
+                VttQue {
+                    timings: VttTimings {
+                        start: VttTimestamp {
+                            seconds: 5,
+                            ..Default::default()
+                        },
+                        end: VttTimestamp {
+                            seconds: 9,
+                            ..Default::default()
+                        },
+                    },
+                    payload: vec![
+                        "- It will perforate your stomach.".to_string(),
+                        "- You could die.".to_string(),
+                    ],
+                    ..Default::default()
+                }.into(),
+            ],
+            ..Default::default()
+        };
+
+        let expected = r#"WEBVTT
+
+00:00:01.000 --> 00:00:04.000
+- Never drink liquid nitrogen.
+
+00:00:05.000 --> 00:00:09.000
+- It will perforate your stomach.
+- You could die.
+"#;
+
+        assert_eq!(vtt.render(), expected);
+
+        let vtt = WebVtt {
+            header: VttHeader {
+                description: Some(VttDescription::Side("This is a description.".to_string())),
+            },
+            blocks: vec![
+                VttComment::Side("This is a comment.".to_string()).into(),
+                VttRegion {
+                    id: Some("region_id".to_string()),
+                    width: Some(Percentage { value: 50.0 }),
+                    lines: Some(3),
+                    region_anchor: Some(Anchor { x: Percentage { value: 50.0 }, y: Percentage { value: 50.0 } }),
+                    viewport_anchor: Some(Anchor { x: Percentage { value: 50.0 }, y: Percentage { value: 50.0 } }),
+                    scroll: Some(Scroll::Up),
+                }.into(),
+                VttStyle {
+                    style: r#"video::cue {
+  background-image: linear-gradient(to bottom, dimgray, lightgray);
+  color: papayawhip;
+}"#
+                        .to_string()
+                }.into(),
+                VttQue {
+                    identifier: Some("1".to_string()),
+                    timings: VttTimings {
+                        start: VttTimestamp {
+                            hours: 1,
+                            minutes: 2,
+                            seconds: 3,
+                            milliseconds: 4,
+                        },
+                        end: VttTimestamp {
+                            hours: 1,
+                            minutes: 2,
+                            seconds: 5,
+                            milliseconds: 6,
+                        },
+                    },
+                    settings: Some(CueSettings {
+                        vertical: Some(Vertical::Lr),
+                        line: Some(Line::Percentage(Percentage { value: 100.0 }, Some(LineAlignment::Center))),
+                        position: Some(Position { value: Percentage { value: 50.0 }, alignment: Some(PositionAlignment::Center) }),
+                        size: Some(Percentage { value: 50.0 }),
+                        align: Some(Alignment::Center),
+                        region: Some("region_id".to_string()),
+                    }),
+                    payload: vec![
+                        "- Never drink liquid nitrogen.".to_string(),
+                    ],
+                }.into(),
+            ],
+        };
+
+        let expected = r#"WEBVTT This is a description.
+
+NOTE This is a comment.
+
+REGION
+id:region_id
+width:50%
+lines:3
+regionanchor:50%,50%
+viewportanchor:50%,50%
+scroll:up
+
+STYLE
+video::cue {
+  background-image: linear-gradient(to bottom, dimgray, lightgray);
+  color: papayawhip;
+}
+
+1
+01:02:03.004 --> 01:02:05.006 vertical:lr line:100%,center position:50%,center size:50% align:center region:region_id
+- Never drink liquid nitrogen.
+"#;
+
+        assert_eq!(vtt.render(), expected);
+    }
+
+    #[test]
+    fn iterator() {
+        let vtt = WebVtt {
+            blocks: vec![
+                VttQue {
+                    timings: VttTimings {
+                        start: VttTimestamp {
+                            seconds: 1,
+                            ..Default::default()
+                        },
+                        end: VttTimestamp {
+                            seconds: 4,
+                            ..Default::default()
+                        },
+                    },
+                    payload: vec![
+                        "- Never drink liquid nitrogen.".to_string(),
+                    ],
+                    ..Default::default()
+                }.into(),
+                VttQue {
+                    timings: VttTimings {
+                        start: VttTimestamp {
+                            seconds: 5,
+                            ..Default::default()
+                        },
+                        end: VttTimestamp {
+                            seconds: 9,
+                            ..Default::default()
+                        },
+                    },
+                    payload: vec![
+                        "- It will perforate your stomach.".to_string(),
+                        "- You could die.".to_string(),
+                    ],
+                    ..Default::default()
+                }.into(),
+            ],
+            ..Default::default()
+        };
+
+        let mut iter = vtt.into_iter();
+
+        assert_eq!(iter.next(), Some(VttQue {
+            timings: VttTimings {
+                start: VttTimestamp {
+                    seconds: 1,
+                    ..Default::default()
+                },
+                end: VttTimestamp {
+                    seconds: 4,
+                    ..Default::default()
+                },
+            },
+            payload: vec![
+                "- Never drink liquid nitrogen.".to_string(),
+            ],
+            ..Default::default()
+        }.into()));
+
+        assert_eq!(iter.next(), Some(VttQue {
+            timings: VttTimings {
+                start: VttTimestamp {
+                    seconds: 5,
+                    ..Default::default()
+                },
+                end: VttTimestamp {
+                    seconds: 9,
+                    ..Default::default()
+                },
+            },
+            payload: vec![
+                "- It will perforate your stomach.".to_string(),
+                "- You could die.".to_string(),
+            ],
+            ..Default::default()
+        }.into()));
+
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn display_header() {
+        let header = VttHeader {
+            description: Some(VttDescription::Side("This is a description.".to_string())),
+        };
+
+        let expected = "WEBVTT This is a description.\n";
+
+        assert_eq!(header.to_string(), expected);
+
+        let header = VttHeader {
+            description: Some(VttDescription::Below("This is a description.".to_string())),
+        };
+
+        let expected = "WEBVTT\nThis is a description.\n";
+
+        assert_eq!(header.to_string(), expected);
+
+        let header = VttHeader {
+            description: None,
+        };
+
+        let expected = "WEBVTT\n";
+
+        assert_eq!(header.to_string(), expected);
+    }
+
+    #[test]
+    fn display_cue() {
+        let cue = VttQue {
+            identifier: Some("1".to_string()),
+            timings: VttTimings {
+                start: VttTimestamp {
+                    hours: 0,
+                    minutes: 0,
+                    seconds: 1,
+                    milliseconds: 0,
+                },
+                end: VttTimestamp {
+                    hours: 0,
+                    minutes: 0,
+                    seconds: 4,
+                    milliseconds: 0,
+                },
+            },
+            settings: Some(CueSettings {
+                vertical: Some(Vertical::Lr),
+                line: Some(Line::Percentage(Percentage { value: 100.0 }, Some(LineAlignment::Center))),
+                position: Some(Position { value: Percentage { value: 50.0 }, alignment: Some(PositionAlignment::Center) }),
+                size: Some(Percentage { value: 50.0 }),
+                align: Some(Alignment::Center),
+                region: Some("region".to_string()),
+            }),
+            payload: vec![
+                "- Never drink liquid nitrogen.".to_string(),
+            ],
+        };
+
+        let expected = "1\n00:00:01.000 --> 00:00:04.000 vertical:lr line:100%,center position:50%,center size:50% align:center region:region\n- Never drink liquid nitrogen.\n";
+
+        assert_eq!(cue.to_string(), expected);
+
+        let cue = VttQue {
+            identifier: None,
+            timings: VttTimings {
+                start: VttTimestamp {
+                    hours: 0,
+                    minutes: 0,
+                    seconds: 1,
+                    milliseconds: 0,
+                },
+                end: VttTimestamp {
+                    hours: 0,
+                    minutes: 0,
+                    seconds: 4,
+                    milliseconds: 0,
+                },
+            },
+            settings: None,
+            payload: vec![
+                "- Never drink liquid nitrogen.".to_string(),
+            ],
+        };
+
+        let expected = "00:00:01.000 --> 00:00:04.000\n- Never drink liquid nitrogen.\n";
+
+        assert_eq!(cue.to_string(), expected);
+    }
+
+    #[test]
+    fn display_comment() {
+        let comment = VttComment::Side("This is a comment.".to_string());
+        let expected = "NOTE This is a comment.\n";
+        assert_eq!(comment.to_string(), expected);
+
+        let comment = VttComment::Below("This is a comment.".to_string());
+        let expected = "NOTE\nThis is a comment.\n";
+        assert_eq!(comment.to_string(), expected);
+
+        let comment = VttComment::Side("This is a comment.\nacross line.".to_string());
+        let expected = "NOTE This is a comment.\nacross line.\n";
+        assert_eq!(comment.to_string(), expected);
+    }
+
+    #[test]
+    fn display_style() {
+        let style = VttStyle { style: "This is a style.".to_string() };
+        let expected = "STYLE\nThis is a style.\n";
+        assert_eq!(style.to_string(), expected);
+    }
+
+    #[test]
+    fn display_region() {
+        let region = VttRegion {
+            id: Some("region".to_string()),
+            width: Some(Percentage { value: 50.0 }),
+            lines: Some(3),
+            region_anchor: Some(Anchor { x: Percentage { value: 50.0 }, y: Percentage { value: 50.0 } }),
+            viewport_anchor: Some(Anchor { x: Percentage { value: 50.0 }, y: Percentage { value: 50.0 } }),
+            scroll: Some(Scroll::Up),
+        };
+        let expected = "REGION\nid:region\nwidth:50%\nlines:3\nregionanchor:50%,50%\nviewportanchor:50%,50%\nscroll:up\n";
+        assert_eq!(region.to_string(), expected);
+
+        let region = VttRegion {
+            id: Some("region".to_string()),
+            width: Some(Percentage { value: 50.0 }),
+            lines: None,
+            region_anchor: None,
+            viewport_anchor: None,
+            scroll: None,
+        };
+        let expected = "REGION\nid:region\nwidth:50%\n";
+        assert_eq!(region.to_string(), expected);
     }
 }
