@@ -85,11 +85,25 @@ peg::parser! {
             = p:percentage_int() { p as f32 }
             / p:percentage_float() { p }
 
-        /// Sequential text.
+        /// Anchor.
+        pub(crate) rule anchor() -> (f32, f32)
+            = x:percentage() "," y:percentage()
+            {
+                (x, y)
+            }
+
+        /// Sequential text without space of newline.
         pub(crate) rule sequence() -> String
             = t:$((!whitespace_or_newline() [_])+)
             {
                 t.to_string()
+            }
+
+        /// Block of text.
+        pub(crate) rule text_block() -> String
+            = !newline() lines:$((!newline() [_])+ newline()) ++ ()
+            {
+                lines.join("").to_string()
             }
 
         /// Single text with newline.
@@ -102,11 +116,17 @@ peg::parser! {
         /// Multiple lines block of text.
         pub(crate) rule multiline() -> Vec<String>
             = !whitespace_or_newline() lines:$((!newline() [_])+ newline()) ** ()
-            {
-                lines
+            {?
+                let lines = lines
                     .iter()
                     .map(|l| l.to_string().trim().to_string())
-                    .collect()
+                    .collect::<Vec<String>>();
+
+                if !lines.is_empty() {
+                    Ok(lines)
+                } else {
+                    Err("Empty multiline")
+                }
             }
     }
 }
@@ -330,6 +350,25 @@ mod test {
     }
 
     #[test]
+    fn anchor() {
+        assert_eq!(super::rules::anchor("0%,0%").unwrap(), (0.0, 0.0));
+        assert_eq!(super::rules::anchor("1%,1%").unwrap(), (1.0, 1.0));
+        assert_eq!(super::rules::anchor("9%,9%").unwrap(), (9.0, 9.0));
+        assert_eq!(super::rules::anchor("10%,10%").unwrap(), (10.0, 10.0));
+        assert_eq!(super::rules::anchor("99%,99%").unwrap(), (99.0, 99.0));
+        assert_eq!(super::rules::anchor("100%,100%").unwrap(), (100.0, 100.0));
+        assert_eq!(super::rules::anchor("100.0%,100.0%").unwrap(), (100.0, 100.0));
+        assert_eq!(super::rules::anchor("000%,000%").unwrap(), (0.0, 0.0));
+        assert!(super::rules::anchor("100.1%,100.1%").is_err());
+        assert!(super::rules::anchor("100.9%,100.9%").is_err());
+        assert!(super::rules::anchor("101%,101%").is_err());
+        assert!(super::rules::anchor("999%,999%").is_err());
+        assert!(super::rules::anchor("0,0").is_err());
+        assert!(super::rules::anchor("a").is_err());
+        assert!(super::rules::anchor(" ").is_err());
+    }
+
+    #[test]
     fn sequence() {
         assert_eq!(super::rules::sequence("Hello,world!").unwrap(), "Hello,world!".to_string());
         assert!(super::rules::sequence(" Hello,world!").is_err());
@@ -339,6 +378,18 @@ mod test {
         assert!(super::rules::sequence("Hello,\nworld!").is_err());
         assert!(super::rules::sequence("Hello,world!\n").is_err());
         assert!(super::rules::sequence(" Hello,world!  \n").is_err());
+    }
+
+    #[test]
+    fn text_block() {
+        assert_eq!(super::rules::text_block("Hello, world!\n").unwrap(), "Hello, world!\n".to_string());
+        assert_eq!(super::rules::text_block("Hello, world!\nThis is a test.\n").unwrap(), "Hello, world!\nThis is a test.\n".to_string());
+        assert_eq!(super::rules::text_block("Hello, world!\nThis is a test.\nHow are you?\n").unwrap(), "Hello, world!\nThis is a test.\nHow are you?\n".to_string());
+        assert!(super::rules::text_block("").is_err());
+        assert!(super::rules::text_block("Hello, world!").is_err());
+        assert!(super::rules::text_block("\nHello, world!\n").is_err());
+        assert!(super::rules::text_block("Hello, world!\nThis is a test.\n\n").is_err());
+        assert!(super::rules::text_block("some\ntext\n\nover\nline").is_err());
     }
 
     #[test]
@@ -373,6 +424,7 @@ mod test {
             ]
         );
 
+        assert!(super::rules::multiline("").is_err());
         assert!(super::rules::multiline("Hello, world!").is_err());
         assert!(super::rules::multiline("\nHello, world!\n").is_err());
         assert!(super::rules::multiline("Hello, world!\nThis is a test.\n\n").is_err());

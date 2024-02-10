@@ -60,11 +60,17 @@ peg::parser! {
         /// Multiple lines block of text.
         pub(crate) rule multiline() -> Vec<String>
             = !whitespace_or_newline() lines:$((!newline() [_])+ newline()) ** ()
-            {
-                lines
+            {?
+                let lines = lines
                     .iter()
                     .map(|l| l.to_string().trim().to_string())
-                    .collect()
+                    .collect::<Vec<String>>();
+
+                if !lines.is_empty() {
+                    Ok(lines)
+                } else {
+                    Err("Empty multiline")
+                }
             }
 
         /// Timestamp.
