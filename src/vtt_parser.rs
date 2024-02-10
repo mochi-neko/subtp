@@ -508,7 +508,7 @@ peg::parser! {
         pub(crate) rule vtt() -> WebVtt
             = header:header() newline()
                 blocks:block() ** some_whitespaces_or_newlines()
-                whitespace_or_newline()
+                whitespaces_or_newlines()
             {
                 WebVtt {
                     header,
@@ -1360,7 +1360,6 @@ mod test {
 00:05.000 --> 00:09.000
 - It will perforate your stomach.
 - You could die.
-
 "#;
 
         let expected = WebVtt {
@@ -1431,7 +1430,6 @@ mod test {
 00:01:21.058 --> 00:01:23.868
 - [ Bats Screeching ]
 - They won't get in your hair. They're after the bugs.
-
 "#;
 
         let expected = WebVtt {
@@ -1530,7 +1528,6 @@ NOTE This last line may not translate well.
 3
 00:02:25.000 --> 00:02:30.000
 - Ta en kopp
-
 "#;
 
         let expected = WebVtt {
@@ -1628,7 +1625,6 @@ STYLE
 - Hello <b>world</b>.
 
 NOTE style blocks cannot appear after the first cue.
-
 "#;
 
         let expected = WebVtt {
@@ -1678,7 +1674,6 @@ I think he went down this lane.
 
 00:00:04.000 --> 00:00:06.500 position:45%,line-right align:center size:35%
 What are you waiting for?
-
 "#;
 
         let exoected = WebVtt {

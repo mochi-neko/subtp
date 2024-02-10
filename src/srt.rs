@@ -258,37 +258,44 @@ This is a test.
 
 "#;
 
-        let srt = SubRip::parse(srt_text).unwrap();
+        let expected = SubRip {
+            subtitles: vec![
+                SrtSubtitle {
+                    sequence: 1,
+                    start: SrtTimestamp {
+                        hours: 0,
+                        minutes: 0,
+                        seconds: 1,
+                        milliseconds: 0,
+                    },
+                    end: SrtTimestamp {
+                        hours: 0,
+                        minutes: 0,
+                        seconds: 2,
+                        milliseconds: 0,
+                    },
+                    text: vec!["Hello, world!".to_string()],
+                },
+                SrtSubtitle {
+                    sequence: 2,
+                    start: SrtTimestamp {
+                        hours: 0,
+                        minutes: 0,
+                        seconds: 3,
+                        milliseconds: 0,
+                    },
+                    end: SrtTimestamp {
+                        hours: 0,
+                        minutes: 0,
+                        seconds: 4,
+                        milliseconds: 0,
+                    },
+                    text: vec!["This is a test.".to_string()],
+                },
+            ],
+        };
 
-        assert_eq!(srt.subtitles.len(), 2);
-        assert_eq!(srt.subtitles[0].sequence, 1);
-        assert_eq!(
-            srt.subtitles[0].start,
-            SrtTimestamp {
-                hours: 0,
-                minutes: 0,
-                seconds: 1,
-                milliseconds: 0,
-            }
-        );
-        assert_eq!(
-            srt.subtitles[0].end,
-            SrtTimestamp {
-                hours: 0,
-                minutes: 0,
-                seconds: 2,
-                milliseconds: 0,
-            }
-        );
-        assert_eq!(
-            srt.subtitles[0].text,
-            vec!["Hello, world!"]
-        );
-        assert_eq!(srt.subtitles[1].sequence, 2);
-        assert_eq!(
-            srt.subtitles[1].text,
-            vec!["This is a test."]
-        );
+        assert_eq!(SubRip::parse(srt_text).unwrap(), expected);
     }
 
     #[test]

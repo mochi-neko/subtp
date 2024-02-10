@@ -274,6 +274,11 @@ Hello, world!
 "#;
         assert_eq!(srt_parser::srt(text).unwrap(), srt);
 
+        let text = r#"1
+00:00:00,000 --> 00:00:01,000
+Hello, world!"#;
+        assert!(srt_parser::srt(text).is_err());
+
         let text = r#"
 1
 00:00:00,000 --> 00:00:01,000
