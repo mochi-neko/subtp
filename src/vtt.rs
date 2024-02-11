@@ -3,7 +3,7 @@
 //! ## Example
 //! ```
 //! use subtp::vtt::WebVtt;
-//! use subtp::vtt::VttQue;
+//! use subtp::vtt::VttCue;
 //! use subtp::vtt::VttTimings;
 //! use subtp::vtt::VttTimestamp;
 //!
@@ -23,7 +23,7 @@
 //!     vtt,
 //!     WebVtt {
 //!         blocks: vec![
-//!             VttQue {
+//!             VttCue {
 //!                 timings: VttTimings {
 //!                     start: VttTimestamp {
 //!                         seconds: 1,
@@ -38,7 +38,7 @@
 //!                 ..Default::default()
 //!             }
 //!             .into(),
-//!             VttQue {
+//!             VttCue {
 //!                 timings: VttTimings {
 //!                     start: VttTimestamp {
 //!                         seconds: 5,
@@ -79,12 +79,12 @@ pub struct WebVtt {
 }
 
 impl WebVtt {
-    /// Parse the input string as a WebVTT.
+    /// Parses the WebVTT format from the given text.
     pub fn parse(input: &str) -> Result<Self, crate::error::ParseError> {
         crate::vtt_parser::vtt(input).map_err(Into::into)
     }
 
-    /// Render the WebVTT to a string.
+    /// Renders the text from the WebVTT format.
     pub fn render(&self) -> String {
         self.to_string()
     }
@@ -194,7 +194,7 @@ impl Display for VttDescription {
 #[derive(Debug, Clone, PartialEq)]
 pub enum VttBlock {
     /// The cue block.
-    Que(VttQue),
+    Que(VttCue),
     /// The comment block.
     Comment(VttComment),
     /// The style block.
@@ -203,8 +203,8 @@ pub enum VttBlock {
     Region(VttRegion),
 }
 
-impl From<VttQue> for VttBlock {
-    fn from(value: VttQue) -> Self {
+impl From<VttCue> for VttBlock {
+    fn from(value: VttCue) -> Self {
         VttBlock::Que(value)
     }
 }
@@ -376,7 +376,7 @@ impl Display for VttStyle {
 
 /// The cue block.
 #[derive(Debug, Clone, PartialEq)]
-pub struct VttQue {
+pub struct VttCue {
     /// The identifier.
     pub identifier: Option<String>,
     /// The timings.
@@ -387,7 +387,7 @@ pub struct VttQue {
     pub payload: Vec<String>,
 }
 
-impl Default for VttQue {
+impl Default for VttCue {
     fn default() -> Self {
         Self {
             identifier: None,
@@ -398,7 +398,7 @@ impl Default for VttQue {
     }
 }
 
-impl Display for VttQue {
+impl Display for VttCue {
     fn fmt(
         &self,
         f: &mut std::fmt::Formatter<'_>,
@@ -939,7 +939,7 @@ mod test {
 
         let expected = WebVtt {
             blocks: vec![
-                VttQue {
+                VttCue {
                     timings: VttTimings {
                         start: VttTimestamp {
                             seconds: 1,
@@ -954,7 +954,7 @@ mod test {
                     ..Default::default()
                 }
                 .into(),
-                VttQue {
+                VttCue {
                     timings: VttTimings {
                         start: VttTimestamp {
                             seconds: 5,
@@ -983,7 +983,7 @@ mod test {
     fn render() {
         let vtt = WebVtt {
             blocks: vec![
-                VttQue {
+                VttCue {
                     timings: VttTimings {
                         start: VttTimestamp {
                             seconds: 1,
@@ -998,7 +998,7 @@ mod test {
                     ..Default::default()
                 }
                 .into(),
-                VttQue {
+                VttCue {
                     timings: VttTimings {
                         start: VttTimestamp {
                             seconds: 5,
@@ -1073,7 +1073,7 @@ mod test {
                     .to_string(),
                 }
                 .into(),
-                VttQue {
+                VttCue {
                     identifier: Some("1".to_string()),
                     timings: VttTimings {
                         start: VttTimestamp {
@@ -1145,7 +1145,7 @@ video::cue {
     fn iterator() {
         let vtt = WebVtt {
             blocks: vec![
-                VttQue {
+                VttCue {
                     timings: VttTimings {
                         start: VttTimestamp {
                             seconds: 1,
@@ -1160,7 +1160,7 @@ video::cue {
                     ..Default::default()
                 }
                 .into(),
-                VttQue {
+                VttCue {
                     timings: VttTimings {
                         start: VttTimestamp {
                             seconds: 5,
@@ -1184,7 +1184,7 @@ video::cue {
 
         let mut iter = vtt.into_iter();
 
-        assert_eq!(iter.next(), Some(VttQue {
+        assert_eq!(iter.next(), Some(VttCue {
             timings: VttTimings {
                 start: VttTimestamp {
                     seconds: 1,
@@ -1204,7 +1204,7 @@ video::cue {
         assert_eq!(
             iter.next(),
             Some(
-                VttQue {
+                VttCue {
                     timings: VttTimings {
                         start: VttTimestamp {
                             seconds: 5,
@@ -1261,7 +1261,7 @@ video::cue {
 
     #[test]
     fn display_cue() {
-        let cue = VttQue {
+        let cue = VttCue {
             identifier: Some("1".to_string()),
             timings: VttTimings {
                 start: VttTimestamp {
@@ -1304,7 +1304,7 @@ video::cue {
 
         assert_eq!(cue.to_string(), expected);
 
-        let cue = VttQue {
+        let cue = VttCue {
             identifier: None,
             timings: VttTimings {
                 start: VttTimestamp {

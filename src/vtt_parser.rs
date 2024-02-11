@@ -3,12 +3,13 @@
 pub(crate) use vtt_parser::vtt;
 
 peg::parser! {
+    /// The parser for the WebVTT format.
     grammar vtt_parser() for str {
         use crate::vtt::WebVtt;
         use crate::vtt::VttHeader;
         use crate::vtt::VttRegion;
         use crate::vtt::VttBlock;
-        use crate::vtt::VttQue;
+        use crate::vtt::VttCue;
         use crate::vtt::VttComment;
         use crate::vtt::VttStyle;
         use crate::vtt::VttTimings;
@@ -326,18 +327,18 @@ peg::parser! {
             = "region:" t:sequence() { t }
 
         /// Cue block
-        pub(crate) rule cue() -> VttQue
+        pub(crate) rule cue() -> VttCue
             = cue_with_identifier_and_settings()
                 / cue_with_identifier()
                 / cue_with_settings()
                 / cue_minimal()
 
         /// Minimal cue block
-        rule cue_minimal() -> VttQue
+        rule cue_minimal() -> VttCue
             = whitespaces() timings:timings() whitespaces() newline()
                 whitespaces() payload:multiline()
             {
-                VttQue {
+                VttCue {
                     identifier: None,
                     timings,
                     settings: None,
@@ -346,12 +347,12 @@ peg::parser! {
             }
 
         /// Cue block with an identifier.
-        rule cue_with_identifier() -> VttQue
+        rule cue_with_identifier() -> VttCue
             = whitespaces() identifier:line()
                 whitespaces() timings:timings() whitespaces() newline()
                 whitespaces() payload:multiline()
             {
-                VttQue {
+                VttCue {
                     identifier: Some(identifier),
                     timings,
                     settings: None,
@@ -360,11 +361,11 @@ peg::parser! {
             }
 
         /// Cue block with settings.
-        rule cue_with_settings() -> VttQue
+        rule cue_with_settings() -> VttCue
             = whitespaces() timings:timings() some_whitespaces() settings:cue_settings() whitespaces() newline()
                 whitespaces() payload:multiline()
             {
-                VttQue {
+                VttCue {
                     identifier: None,
                     timings,
                     settings: Some(settings),
@@ -373,12 +374,12 @@ peg::parser! {
             }
 
         /// Cue block with an identifier and settings.
-        rule cue_with_identifier_and_settings() -> VttQue
+        rule cue_with_identifier_and_settings() -> VttCue
             = whitespaces() identifier:line()
                 whitespaces() timings:timings() some_whitespaces() settings:cue_settings() whitespaces() newline()
                 whitespaces() payload:multiline()
             {
-                VttQue {
+                VttCue {
                     identifier: Some(identifier),
                     timings,
                     settings: Some(settings),
@@ -905,7 +906,7 @@ mod test {
         assert_eq!(
             vtt_parser::cue("00:00:00.000 --> 00:00:01.000\nHello, world!\n")
                 .unwrap(),
-            VttQue {
+            VttCue {
                 identifier: None,
                 timings: VttTimings {
                     start: VttTimestamp {
@@ -932,7 +933,7 @@ mod test {
                 "id\n00:00:00.000 --> 00:00:01.000\nHello, world!\n"
             )
             .unwrap(),
-            VttQue {
+            VttCue {
                 identifier: Some("id".to_string()),
                 timings: VttTimings {
                     start: VttTimestamp {
@@ -959,7 +960,7 @@ mod test {
                 "00:00:00.000 --> 00:00:01.000 line:1 position:50%\nHello, world!\n"
             )
                 .unwrap(),
-            VttQue {
+            VttCue {
                 identifier: None,
                 timings: VttTimings {
                     start: VttTimestamp {
@@ -993,7 +994,7 @@ mod test {
                 "id\n00:00:00.000 --> 00:00:01.000 line:1 position:50%\nHello, world!\n"
             )
                 .unwrap(),
-            VttQue {
+            VttCue {
                 identifier: Some("id".to_string()),
                 timings: VttTimings {
                     start: VttTimestamp {
@@ -1027,7 +1028,7 @@ mod test {
                 " id \n 00:00:00.000 --> 00:00:01.000  line:1  position:50%  \n Hello, world! \n"
             )
                 .unwrap(),
-            VttQue {
+            VttCue {
                 identifier: Some("id".to_string()),
                 timings: VttTimings {
                     start: VttTimestamp {
@@ -1381,7 +1382,7 @@ mod test {
                 description: None,
             },
             blocks: vec![
-                VttQue {
+                VttCue {
                     identifier: None,
                     timings: VttTimings {
                         start: VttTimestamp {
@@ -1401,7 +1402,7 @@ mod test {
                     payload: vec!["- Never drink liquid nitrogen.".to_string()],
                 }
                 .into(),
-                VttQue {
+                VttCue {
                     identifier: None,
                     timings: VttTimings {
                         start: VttTimestamp {
@@ -1451,7 +1452,7 @@ mod test {
                 description: Some(VttDescription::Side("- This file has cues.\n".to_string()))
             },
             blocks: vec![
-                VttQue {
+                VttCue {
                     identifier: Some("14".to_string()),
                     timings: VttTimings {
                         start: VttTimestamp {
@@ -1473,7 +1474,7 @@ mod test {
                         "- Where are we now?".to_string(),
                     ],
                 }.into(),
-                VttQue {
+                VttCue {
                     identifier: Some("15".to_string()),
                     timings: VttTimings {
                         start: VttTimestamp {
@@ -1494,7 +1495,7 @@ mod test {
                         "- This is big bat country.".to_string(),
                     ],
                 }.into(),
-                VttQue {
+                VttCue {
                     identifier: Some("16".to_string()),
                     timings: VttTimings {
                         start: VttTimestamp {
@@ -1550,7 +1551,7 @@ NOTE This last line may not translate well.
             },
             blocks: vec![
                 VttComment::Below("This translation was done by Kyle so that\nsome friends can watch it with their parents.".to_string()).into(),
-                VttQue {
+                VttCue {
                     identifier: Some("1".to_string()),
                     timings: VttTimings {
                         start: VttTimestamp {
@@ -1572,7 +1573,7 @@ NOTE This last line may not translate well.
                         "- Det är inte varmt.".to_string(),
                     ],
                 }.into(),
-                VttQue {
+                VttCue {
                     identifier: Some("2".to_string()),
                     timings: VttTimings {
                         start: VttTimestamp {
@@ -1595,7 +1596,7 @@ NOTE This last line may not translate well.
                     ],
                 }.into(),
                 VttComment::Side("This last line may not translate well.".to_string()).into(),
-                VttQue {
+                VttCue {
                     identifier: Some("3".to_string()),
                     timings: VttTimings {
                         start: VttTimestamp {
@@ -1653,7 +1654,7 @@ NOTE style blocks cannot appear after the first cue.
                 VttStyle {
                     style: "::cue(b) {\n  color: peachpuff;\n}\n".to_string()
                 }.into(),
-                VttQue {
+                VttCue {
                     identifier: None,
                     timings: VttTimings {
                         start: VttTimestamp {
@@ -1690,12 +1691,12 @@ I think he went down this lane.
 What are you waiting for?
 "#;
 
-        let exoected = WebVtt {
+        let expected = WebVtt {
             header: VttHeader {
                 description: None,
             },
             blocks: vec![
-                VttQue {
+                VttCue {
                     identifier: None,
                     timings: VttTimings {
                         start: VttTimestamp {
@@ -1727,7 +1728,7 @@ What are you waiting for?
                     payload: vec!["Where did he go?".to_string()],
                 }
                 .into(),
-                VttQue {
+                VttCue {
                     identifier: None,
                     timings: VttTimings {
                         start: VttTimestamp {
@@ -1761,7 +1762,7 @@ What are you waiting for?
                     ],
                 }
                 .into(),
-                VttQue {
+                VttCue {
                     identifier: None,
                     timings: VttTimings {
                         start: VttTimestamp {
@@ -1796,6 +1797,6 @@ What are you waiting for?
             ],
         };
 
-        assert_eq!(vtt_parser::vtt(text).unwrap(), exoected);
+        assert_eq!(vtt_parser::vtt(text).unwrap(), expected);
     }
 }
