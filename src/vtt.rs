@@ -400,7 +400,7 @@ impl Display for VttDescription {
 ///
 /// assert_eq!(
 ///     block.to_string(),
-///     "00:01:00.000 --> 00:04:00.000\n- Never drink liquid nitrogen.\n".to_string()
+///     "00:00:01.000 --> 00:00:04.000\n- Never drink liquid nitrogen.\n".to_string()
 /// );
 /// ```
 ///
@@ -740,7 +740,7 @@ impl Display for VttStyle {
 ///
 /// assert_eq!(
 ///     cue.to_string(),
-///     "00:01:00.000 --> 00:04:00.000\n- Never drink liquid nitrogen.\n".to_string()
+///     "00:00:01.000 --> 00:00:04.000\n- Never drink liquid nitrogen.\n".to_string()
 /// );
 ///
 /// use subtp::vtt::CueSettings;
@@ -785,7 +785,7 @@ impl Display for VttStyle {
 ///
 /// assert_eq!(
 ///     cue.to_string(),
-///     "cue_id\n00:03:00.000 --> 00:04:00.000 vertical:lr line:3,center position:50%,center size:100% align:end region:region_id\n- It will perforate your stomach.\n".to_string()
+///     "cue_id\n00:00:03.000 --> 00:00:04.000 vertical:lr line:3,center position:50%,center size:100% align:end region:region_id\n- It will perforate your stomach.\n".to_string()
 /// );
 /// ```
 #[derive(Debug, Clone, PartialEq)]
@@ -850,7 +850,7 @@ impl Display for VttCue {
 ///
 /// assert_eq!(
 ///     timings.to_string(),
-///     "00:01:00.000 --> 00:04:00.000".to_string()
+///     "00:00:01.000 --> 00:00:04.000".to_string()
 /// );
 /// ```
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
