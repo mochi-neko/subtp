@@ -16,7 +16,7 @@
 //! Thank you for your reading.
 //! "#;
 //!
-//! let srt = SubRip::parse(text)?;
+//! let srt = SubRip::parse(text).unwrap();
 //! assert_eq!(srt, SubRip {
 //!     subtitles: vec![
 //!         SrtSubtitle {
@@ -128,7 +128,7 @@ impl SubRip {
     /// Thank you for your reading.
     /// "#;
     ///
-    /// let srt = SubRip::parse(text)?;
+    /// let srt = SubRip::parse(text).unwrap();
     /// ```
     pub fn parse(text: &str) -> ParseResult<Self> {
         str_parser::srt(text).map_err(|err| err.into())

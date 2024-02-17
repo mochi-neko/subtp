@@ -17,7 +17,7 @@
 //! - You could die.
 //! "#;
 //!
-//! let vtt = WebVtt::parse(text)?;
+//! let vtt = WebVtt::parse(text).unwrap();
 //!
 //! assert_eq!(
 //!     vtt,
@@ -160,7 +160,7 @@ impl WebVtt {
     /// - You could die.
     /// "#;
     ///
-    /// let vtt = WebVtt::parse(text)?;
+    /// let vtt = WebVtt::parse(text).unwrap();
     /// ```
     pub fn parse(input: &str) -> Result<Self, crate::error::ParseError> {
         crate::vtt_parser::vtt(input).map_err(Into::into)
