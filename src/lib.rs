@@ -1,7 +1,7 @@
 //! # subtp
 //! A parser for subtitle files such as the SubRip Subtitle (.srt) and the WebVTT (.vtt).
 //!
-//! - [SuRip Subtitle (.srt)](`crate::srt::SubRip`)
+//! - [SubRip Subtitle (.srt)](`crate::srt::SubRip`)
 //! - [WebVTT (.vtt)](`crate::vtt::WebVtt`)
 
 // Re-exports.
