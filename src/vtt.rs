@@ -9,10 +9,10 @@
 //!
 //! let text = r#"WEBVTT
 //!
-//! 00:01.000 --> 00:04.000
+//! 00:00:01.000 --> 00:00:04.000
 //! - Never drink liquid nitrogen.
 //!
-//! 00:05.000 --> 00:09.000
+//! 00:00:05.000 --> 00:00:09.000
 //! - It will perforate your stomach.
 //! - You could die.
 //! "#;
@@ -91,7 +91,7 @@ use std::ops::{Add, Sub};
 /// - You could die.
 /// "#;
 ///
-/// let vtt = WebVtt::parse(text)?;
+/// let vtt = WebVtt::parse(text).unwrap();
 ///
 /// assert_eq!(
 ///     vtt,
