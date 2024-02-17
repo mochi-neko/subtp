@@ -1,4 +1,4 @@
-//! A parser for the WebVTT (.vtt) format.
+//! A parser for the WebVTT (`.vtt`) format provided by [`subtp::vtt::WebVtt`](crate::vtt::WebVtt).
 //!
 //! ## Example
 //! ```
@@ -70,6 +70,71 @@ use std::fmt::Display;
 use std::ops::{Add, Sub};
 
 /// The WebVTT (`.vtt`) format.
+///
+/// Parses from text by [`WebVtt::parse`](crate::vtt::WebVtt::parse)
+/// and renders to text by [`WebVtt::render`](crate::vtt::WebVtt::render).
+///
+/// ## Example
+/// ```
+/// use subtp::vtt::WebVtt;
+/// use subtp::vtt::VttCue;
+/// use subtp::vtt::VttTimings;
+/// use subtp::vtt::VttTimestamp;
+///
+/// let text = r#"WEBVTT
+///
+/// 00:00:01.000 --> 00:00:04.000
+/// - Never drink liquid nitrogen.
+///
+/// 00:00:05.000 --> 00:00:09.000
+/// - It will perforate your stomach.
+/// - You could die.
+/// "#;
+///
+/// let vtt = WebVtt::parse(text)?;
+///
+/// assert_eq!(
+///     vtt,
+///     WebVtt {
+///         blocks: vec![
+///             VttCue {
+///                 timings: VttTimings {
+///                     start: VttTimestamp {
+///                         seconds: 1,
+///                         ..Default::default()
+///                     },
+///                     end: VttTimestamp {
+///                         seconds: 4,
+///                         ..Default::default()
+///                     },
+///                 },
+///                 payload: vec!["- Never drink liquid nitrogen.".to_string()],
+///                 ..Default::default()
+///             }
+///             .into(),
+///             VttCue {
+///                 timings: VttTimings {
+///                     start: VttTimestamp {
+///                         seconds: 5,
+///                         ..Default::default()
+///                     },
+///                     end: VttTimestamp {
+///                         seconds: 9,
+///                         ..Default::default()
+///                     },
+///                 },
+///                 payload: vec![
+///                     "- It will perforate your stomach.".to_string(),
+///                     "- You could die.".to_string()
+///                 ],
+///                 ..Default::default()
+///             }
+///             .into(),
+///         ],
+///         ..Default::default()
+///     }
+/// );
+/// ```
 #[derive(Debug, Clone, PartialEq)]
 pub struct WebVtt {
     /// The header of the WebVTT.
@@ -80,11 +145,77 @@ pub struct WebVtt {
 
 impl WebVtt {
     /// Parses the WebVTT format from the given text.
+    ///
+    /// ## Example
+    /// ```
+    /// use subtp::vtt::WebVtt;
+    ///
+    /// let text = r#"WEBVTT
+    ///
+    /// 00:00:01.000 --> 00:00:04.000
+    /// - Never drink liquid nitrogen.
+    ///
+    /// 00:00:05.000 --> 00:00:09.000
+    /// - It will perforate your stomach.
+    /// - You could die.
+    /// "#;
+    ///
+    /// let vtt = WebVtt::parse(text)?;
+    /// ```
     pub fn parse(input: &str) -> Result<Self, crate::error::ParseError> {
         crate::vtt_parser::vtt(input).map_err(Into::into)
     }
 
     /// Renders the text from the WebVTT format.
+    ///
+    /// ## Example
+    /// ```
+    /// use subtp::vtt::WebVtt;
+    /// use subtp::vtt::VttCue;
+    /// use subtp::vtt::VttTimings;
+    /// use subtp::vtt::VttTimestamp;
+    ///
+    /// let vtt = WebVtt {
+    ///     blocks: vec![
+    ///         VttCue {
+    ///             timings: VttTimings {
+    ///                 start: VttTimestamp {
+    ///                     seconds: 1,
+    ///                     ..Default::default()
+    ///                 },
+    ///                 end: VttTimestamp {
+    ///                     seconds: 4,
+    ///                     ..Default::default()
+    ///                 },
+    ///             },
+    ///             payload: vec!["- Never drink liquid nitrogen.".to_string()],
+    ///             ..Default::default()
+    ///         }
+    ///         .into(),
+    ///         VttCue {
+    ///             timings: VttTimings {
+    ///                 start: VttTimestamp {
+    ///                     seconds: 5,
+    ///                     ..Default::default()
+    ///                 },
+    ///                 end: VttTimestamp {
+    ///                     seconds: 9,
+    ///                     ..Default::default()
+    ///                 },
+    ///             },
+    ///             payload: vec![
+    ///                 "- It will perforate your stomach.".to_string(),
+    ///                 "- You could die.".to_string()
+    ///             ],
+    ///             ..Default::default()
+    ///         }
+    ///         .into(),
+    ///     ],
+    ///    ..Default::default()
+    /// };
+    ///
+    /// let rendered = vtt.render();
+    /// ```
     pub fn render(&self) -> String {
         self.to_string()
     }
@@ -132,6 +263,39 @@ impl Iterator for WebVtt {
 }
 
 /// The header block.
+///
+/// ## Example
+/// ```
+/// use subtp::vtt::VttHeader;
+/// use subtp::vtt::VttDescription;
+///
+/// // A header without description.
+/// let header = VttHeader {
+///     description: None,
+/// };
+/// assert_eq!(
+///     header.to_string(),
+///     "WEBVTT\n".to_string()
+/// );
+///
+/// // A header with description from side of "WEBVTT".
+/// let header = VttHeader {
+///    description: Some(VttDescription::Side("This is a description.".to_string())),
+/// };
+/// assert_eq!(
+///     header.to_string(),
+///     "WEBVTT This is a description.\n".to_string()
+/// );
+///
+/// // A header with description from below of "WEBVTT".
+/// let header = VttHeader {
+///     description: Some(VttDescription::Below("This is a description.".to_string())),
+/// };
+/// assert_eq!(
+///     header.to_string(),
+///     "WEBVTT\nThis is a description.\n".to_string()
+/// );
+/// ```
 #[derive(Debug, Clone, PartialEq)]
 pub struct VttHeader {
     /// The description of this file.
@@ -160,6 +324,24 @@ impl Display for VttHeader {
 }
 
 /// The description of the WebVTT.
+///
+/// ## Example
+/// ```
+/// use subtp::vtt::VttDescription;
+///
+/// // A description from side.
+/// let description = VttDescription::Side("This is a description.".to_string());
+/// assert_eq!(
+///     description.to_string(),
+///     " This is a description.".to_string()
+/// );
+///
+/// // A description from below.
+/// let description = VttDescription::Below("This is a description.".to_string());
+/// assert_eq!(
+///     description.to_string(),
+///     "\nThis is a description.".to_string()
+/// );
 #[derive(Debug, Clone, PartialEq)]
 pub enum VttDescription {
     /// From side with "WEBVTT".
@@ -191,6 +373,89 @@ impl Display for VttDescription {
 }
 
 /// The block of WebVTT.
+///
+/// ## Example
+///
+/// From [`VttCue`](crate::vtt::VttCue):
+/// ```
+/// use subtp::vtt::VttBlock;
+/// use subtp::vtt::VttCue;
+/// use subtp::vtt::VttTimings;
+/// use subtp::vtt::VttTimestamp;
+///
+/// let block: VttBlock = VttCue {
+///     timings: VttTimings {
+///         start: VttTimestamp {
+///             seconds: 1,
+///             ..Default::default()
+///         },
+///         end: VttTimestamp {
+///             seconds: 4,
+///             ..Default::default()
+///         },
+///     },
+///     payload: vec!["- Never drink liquid nitrogen.".to_string()],
+///     ..Default::default()
+/// }.into();
+///
+/// assert_eq!(
+///     block.to_string(),
+///     "00:01:00.000 --> 00:04:00.000\n- Never drink liquid nitrogen.\n".to_string()
+/// );
+/// ```
+///
+/// From [`VttComment`](crate::vtt::VttComment):
+/// ```
+/// use subtp::vtt::VttBlock;
+/// use subtp::vtt::VttComment;
+///
+/// let block: VttBlock = VttComment::Side("This is a comment.".to_string()).into();
+///
+/// assert_eq!(
+///     block.to_string(),
+///     "NOTE This is a comment.\n".to_string()
+/// );
+/// ```
+///
+/// From [`VttStyle`](crate::vtt::VttStyle):
+/// ```
+/// use subtp::vtt::VttBlock;
+/// use subtp::vtt::VttStyle;
+///
+/// let block: VttBlock = VttStyle {
+///     style: r#"video::cue {
+///   background-image: linear-gradient(to bottom, dimgray, lightgray);
+///   color: papayawhip;
+/// }"#
+///     .to_string(),
+/// }.into();
+///
+/// assert_eq!(
+///     block.to_string(),
+///     "STYLE\nvideo::cue {\n  background-image: linear-gradient(to bottom, dimgray, lightgray);\n  color: papayawhip;\n}\n".to_string()
+/// );
+/// ```
+///
+/// From [`VttRegion`](crate::vtt::VttRegion):
+/// ```
+/// use subtp::vtt::VttBlock;
+/// use subtp::vtt::VttRegion;
+/// use subtp::vtt::Percentage;
+///
+/// let block: VttBlock = VttRegion {
+///     id: Some("region_id".to_string()),
+///     width: Some(Percentage {
+///         value: 50.0,
+///     }),
+///     lines: Some(3),
+///     ..Default::default()
+/// }.into();
+///
+/// assert_eq!(
+///     block.to_string(),
+///     "REGION\nid:region_id\nwidth:50%\nlines:3\n".to_string()
+/// );
+/// ```
 #[derive(Debug, Clone, PartialEq)]
 pub enum VttBlock {
     /// The cue block.
@@ -250,6 +515,44 @@ impl Display for VttBlock {
 }
 
 /// The region block.
+///
+/// ## Example
+/// ```
+/// use subtp::vtt::VttRegion;
+/// use subtp::vtt::Percentage;
+/// use subtp::vtt::Anchor;
+/// use subtp::vtt::Scroll;
+///
+/// let region = VttRegion {
+///     id: Some("region_id".to_string()),
+///     width: Some(Percentage {
+///         value: 50.0,
+///     }),
+///     lines: Some(3),
+///     region_anchor: Some(Anchor {
+///         x: Percentage {
+///             value: 50.0,
+///         },
+///         y: Percentage {
+///             value: 50.0,
+///         },
+///     }),
+///     viewport_anchor: Some(Anchor {
+///         x: Percentage {
+///             value: 50.0,
+///         },
+///         y: Percentage {
+///             value: 50.0,
+///         },
+///     }),
+///     scroll: Some(Scroll::Up),
+/// };
+///
+/// assert_eq!(
+///     region.to_string(),
+///     "REGION\nid:region_id\nwidth:50%\nlines:3\nregionanchor:50%,50%\nviewportanchor:50%,50%\nscroll:up\n".to_string()
+/// );
+/// ```
 #[derive(Debug, Clone, PartialEq)]
 pub struct VttRegion {
     /// The identifier.
@@ -266,6 +569,7 @@ pub struct VttRegion {
     pub scroll: Option<Scroll>,
 }
 
+/// The region identifier.
 pub type RegionId = String;
 
 impl Default for VttRegion {
@@ -321,6 +625,23 @@ impl Display for VttRegion {
 }
 
 /// The comment block.
+///
+/// ## Example
+/// ```
+/// use subtp::vtt::VttComment;
+///
+/// let comment = VttComment::Side("This is a comment.".to_string());
+/// assert_eq!(
+///     comment.to_string(),
+///     "NOTE This is a comment.\n".to_string()
+/// );
+///
+/// let comment = VttComment::Below("This is a comment.".to_string());
+/// assert_eq!(
+///     comment.to_string(),
+///     "NOTE\nThis is a comment.\n".to_string()
+/// );
+/// ```
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum VttComment {
     /// Side with "NOTE".
@@ -352,6 +673,24 @@ impl Display for VttComment {
 }
 
 /// The style block.
+///
+/// ## Example
+/// ```
+/// use subtp::vtt::VttStyle;
+///
+/// let style = VttStyle {
+///    style: r#"video::cue {
+/// background-image: linear-gradient(to bottom, dimgray, lightgray);
+/// color: papayawhip;
+/// }"#
+///     .to_string(),
+/// };
+///
+/// assert_eq!(
+///     style.to_string(),
+///     "STYLE\nvideo::cue {\nbackground-image: linear-gradient(to bottom, dimgray, lightgray);\ncolor: papayawhip;\n}\n".to_string()
+/// );
+/// ```
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct VttStyle {
     pub style: String,
@@ -375,6 +714,80 @@ impl Display for VttStyle {
 }
 
 /// The cue block.
+///
+/// ## Example
+/// ```
+/// use subtp::vtt::VttBlock;
+/// use subtp::vtt::VttCue;
+/// use subtp::vtt::VttTimings;
+/// use subtp::vtt::VttTimestamp;
+///
+/// // A simple cue block.
+/// let cue = VttCue {
+///     timings: VttTimings {
+///         start: VttTimestamp {
+///             seconds: 1,
+///             ..Default::default()
+///         },
+///         end: VttTimestamp {
+///             seconds: 4,
+///             ..Default::default()
+///         },
+///     },
+///     payload: vec!["- Never drink liquid nitrogen.".to_string()],
+///     ..Default::default()
+/// };
+///
+/// assert_eq!(
+///     cue.to_string(),
+///     "00:01:00.000 --> 00:04:00.000\n- Never drink liquid nitrogen.\n".to_string()
+/// );
+///
+/// use subtp::vtt::CueSettings;
+/// use subtp::vtt::Vertical;
+/// use subtp::vtt::Line;
+/// use subtp::vtt::LineAlignment;
+/// use subtp::vtt::Position;
+/// use subtp::vtt::Percentage;
+/// use subtp::vtt::PositionAlignment;
+/// use subtp::vtt::Alignment;
+///
+/// // A cue block with identifier and settings.
+/// let cue = VttCue {
+///     identifier: Some("cue_id".to_string()),
+///     timings: VttTimings {
+///         start: VttTimestamp {
+///             seconds: 3,
+///             ..Default::default()
+///         },
+///         end: VttTimestamp {
+///             seconds: 4,
+///             ..Default::default()
+///         },
+///     },
+///     settings: Some(CueSettings {
+///         vertical: Some(Vertical::Lr),
+///         line: Some(Line::LineNumber(3, Some(LineAlignment::Center))),
+///         position: Some(Position {
+///             value: Percentage {
+///                 value: 50.0,
+///             },
+///             alignment: Some(PositionAlignment::Center),
+///         }),
+///         size: Some(Percentage {
+///             value: 100.0,
+///         }),
+///         align: Some(Alignment::End),
+///         region: Some("region_id".to_string()),
+///     }),
+///     payload: vec!["- It will perforate your stomach.".to_string()],
+/// };
+///
+/// assert_eq!(
+///     cue.to_string(),
+///     "cue_id\n00:03:00.000 --> 00:04:00.000 vertical:lr line:3,center position:50%,center size:100% align:end region:region_id\n- It will perforate your stomach.\n".to_string()
+/// );
+/// ```
 #[derive(Debug, Clone, PartialEq)]
 pub struct VttCue {
     /// The identifier.
@@ -418,6 +831,28 @@ impl Display for VttCue {
 }
 
 /// The timings.
+///
+/// ## Example
+/// ```
+/// use subtp::vtt::VttTimings;
+/// use subtp::vtt::VttTimestamp;
+///
+/// let timings = VttTimings {
+///     start: VttTimestamp {
+///         seconds: 1,
+///         ..Default::default()
+///     },
+///     end: VttTimestamp {
+///         seconds: 4,
+///         ..Default::default()
+///     },
+/// };
+///
+/// assert_eq!(
+///     timings.to_string(),
+///     "00:01:00.000 --> 00:04:00.000".to_string()
+/// );
+/// ```
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct VttTimings {
     /// The start timestamp.
@@ -445,6 +880,34 @@ impl Display for VttTimings {
 }
 
 /// The timestamp.
+///
+/// ## Example
+/// ```
+/// use subtp::vtt::VttTimestamp;
+///
+/// let timestamp = VttTimestamp {
+///     hours: 1,
+///     minutes: 2,
+///     seconds: 3,
+///     milliseconds: 4,
+/// };
+///
+/// assert_eq!(
+///     timestamp.to_string(),
+///     "01:02:03.004".to_string()
+/// );
+///
+/// // With default values.
+/// let timestamp = VttTimestamp {
+///     seconds: 1,
+///     ..Default::default()
+/// };
+///
+/// assert_eq!(
+///     timestamp.to_string(),
+///     "00:00:01.000".to_string()
+/// );
+/// ```
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct VttTimestamp {
     /// The hours.
@@ -554,6 +1017,40 @@ impl Sub for VttTimestamp {
     }
 }
 
+/// The settings of cue.
+///
+/// ## Example
+/// ```
+/// use subtp::vtt::CueSettings;
+/// use subtp::vtt::Vertical;
+/// use subtp::vtt::Line;
+/// use subtp::vtt::LineAlignment;
+/// use subtp::vtt::Position;
+/// use subtp::vtt::Percentage;
+/// use subtp::vtt::PositionAlignment;
+/// use subtp::vtt::Alignment;
+///
+/// let settings = CueSettings {
+///     vertical: Some(Vertical::Lr),
+///     line: Some(Line::LineNumber(3, Some(LineAlignment::Center))),
+///     position: Some(Position {
+///         value: Percentage {
+///             value: 50.0,
+///         },
+///         alignment: Some(PositionAlignment::Center),
+///         }),
+///     size: Some(Percentage {
+///         value: 100.0,
+///     }),
+///     align: Some(Alignment::End),
+///     region: Some("region_id".to_string()),
+/// };
+///
+/// assert_eq!(
+///     settings.to_string(),
+///     "vertical:lr line:3,center position:50%,center size:100% align:end region:region_id".to_string()
+/// );
+/// ```
 #[derive(Debug, Clone, PartialEq)]
 pub struct CueSettings {
     /// The vertical setting.
@@ -619,6 +1116,20 @@ impl Display for CueSettings {
 }
 
 /// The percentage in range 0.0 to 100.0, inclusive.
+///
+/// ## Example
+/// ```
+/// use subtp::vtt::Percentage;
+///
+/// let percentage = Percentage {
+///     value: 50.0,
+/// };
+///
+/// assert_eq!(
+///     percentage.to_string(),
+///     "50%".to_string()
+/// );
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub struct Percentage {
     pub value: f32,
@@ -646,6 +1157,26 @@ impl Display for Percentage {
 }
 
 /// The anchor by percentages.
+///
+/// ## Example
+/// ```
+/// use subtp::vtt::Anchor;
+/// use subtp::vtt::Percentage;
+///
+/// let anchor = Anchor {
+///     x: Percentage {
+///         value: 0.0,
+///     },
+///     y: Percentage {
+///         value: 100.0,
+///     },
+/// };
+///
+/// assert_eq!(
+///     anchor.to_string(),
+///     "0%,100%".to_string()
+/// );
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Anchor {
     /// The horizontal setting.
@@ -677,6 +1208,17 @@ impl Display for Anchor {
 }
 
 /// The scroll setting of region.
+///
+/// ## Example
+/// ```
+/// use subtp::vtt::Scroll;
+///
+/// let scroll = Scroll::Up;
+/// assert_eq!(
+///     scroll.to_string(),
+///     "up".to_string()
+/// );
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Scroll {
     /// The scroll up.
@@ -703,6 +1245,18 @@ impl Display for Scroll {
 }
 
 /// The vertical setting of cue.
+///
+/// ## Example
+/// ```
+/// use subtp::vtt::Vertical;
+///
+/// let vertical = Vertical::Lr;
+///
+/// assert_eq!(
+///     vertical.to_string(),
+///     "lr".to_string()
+/// );
+/// ```
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub enum Vertical {
     /// From right to left.
@@ -734,6 +1288,28 @@ impl Display for Vertical {
 }
 
 /// The line setting of cue.
+///
+/// ## Example
+/// ```
+/// use subtp::vtt::Line;
+/// use subtp::vtt::LineAlignment;
+///
+/// // Without alignment.
+/// let line = Line::LineNumber(3, None);
+///
+/// assert_eq!(
+///     line.to_string(),
+///     "3".to_string()
+/// );
+///
+/// // With alignment.
+/// let line = Line::LineNumber(3, Some(LineAlignment::Center));
+///
+/// assert_eq!(
+///     line.to_string(),
+///     "3,center".to_string()
+/// );
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Line {
     /// The percentage.
@@ -773,6 +1349,18 @@ impl Display for Line {
 }
 
 /// The alignment setting of line.
+///
+/// ## Example
+/// ```
+/// use subtp::vtt::LineAlignment;
+///
+/// let alignment = LineAlignment::Center;
+///
+/// assert_eq!(
+///     alignment.to_string(),
+///     "center".to_string()
+/// );
+/// ```
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub enum LineAlignment {
     /// The start alignment.
@@ -809,6 +1397,39 @@ impl Display for LineAlignment {
 }
 
 /// The position setting of cue.
+///
+/// ## Example
+/// ```
+/// use subtp::vtt::Position;
+/// use subtp::vtt::Percentage;
+/// use subtp::vtt::PositionAlignment;
+///
+/// // Without alignment.
+/// let position = Position {
+///     value: Percentage {
+///         value: 50.0,
+///     },
+///     alignment: None,
+/// };
+///
+/// assert_eq!(
+///     position.to_string(),
+///     "50%".to_string()
+/// );
+///
+/// // With alignment.
+/// let position = Position {
+///     value: Percentage {
+///         value: 50.0,
+///     },
+///     alignment: Some(PositionAlignment::Center),
+/// };
+///
+/// assert_eq!(
+///     position.to_string(),
+///     "50%,center".to_string()
+/// );
+/// ```
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Position {
     /// The position value.
@@ -840,6 +1461,18 @@ impl Display for Position {
 }
 
 /// The alignment setting of position.
+///
+/// ## Example
+/// ```
+/// use subtp::vtt::PositionAlignment;
+///
+/// let alignment = PositionAlignment::Center;
+///
+/// assert_eq!(
+///     alignment.to_string(),
+///     "center".to_string()
+/// );
+/// ```
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub enum PositionAlignment {
     /// The line left alignment.
@@ -876,6 +1509,18 @@ impl Display for PositionAlignment {
 }
 
 /// The alignment setting.
+///
+/// ## Example
+/// ```
+/// use subtp::vtt::Alignment;
+///
+/// let alignment = Alignment::End;
+///
+/// assert_eq!(
+///     alignment.to_string(),
+///     "end".to_string()
+/// );
+/// ```
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub enum Alignment {
     /// The start alignment.

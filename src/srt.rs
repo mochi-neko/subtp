@@ -1,4 +1,4 @@
-//! A parser for the SubRip Subtitle (`.srt`) format.
+//! A parser for the SubRip Subtitle (`.srt`) format provided by [`subtp::srt::SubRip`](crate::srt::SubRip).
 //!
 //! ## Example
 //! ```
@@ -69,6 +69,42 @@ use crate::str_parser;
 use crate::ParseResult;
 
 /// The SubRip Subtitle (`.srt`) format.
+///
+/// Parses from text by [`SubRip::parse`](crate::srt::SubRip::parse)
+/// and renders to text by [`SubRip::render`](crate::srt::SubRip::render).
+///
+/// ## Example
+/// ```
+/// use subtp::srt::SubRip;
+/// use subtp::srt::SrtSubtitle;
+/// use subtp::srt::SrtTimestamp;
+///
+/// let subrip = SubRip {
+///     subtitles: vec![
+///         SrtSubtitle {
+///             sequence: 1,
+///             start: SrtTimestamp {
+///                 hours: 0,
+///                 minutes: 0,
+///                 seconds: 1,
+///                 milliseconds: 0,
+///             },
+///             end: SrtTimestamp {
+///                 hours: 0,
+///                 minutes: 0,
+///                 seconds: 2,
+///                 milliseconds: 0,
+///             },
+///             text: vec!["Hello, world!".to_string()],
+///         }
+///     ],
+/// };
+///
+/// assert_eq!(
+///     subrip.render(),
+///     "1\n00:00:01,000 --> 00:00:02,000\nHello, world!\n".to_string()
+/// );
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct SubRip {
     /// The collection of subtitles.
@@ -77,11 +113,58 @@ pub struct SubRip {
 
 impl SubRip {
     /// Parses the SubRip Subtitle format from the given text.
+    ///
+    /// ## Example
+    /// ```
+    /// use subtp::srt::SubRip;
+    ///
+    /// let text = r#"1
+    /// 00:00:01,000 --> 00:00:02,000
+    /// Hello, world!
+    ///
+    /// 2
+    /// 00:00:03,000 --> 00:00:04,000
+    /// This is a sample.
+    /// Thank you for your reading.
+    /// "#;
+    ///
+    /// let srt = SubRip::parse(text)?;
+    /// ```
     pub fn parse(text: &str) -> ParseResult<Self> {
         str_parser::srt(text).map_err(|err| err.into())
     }
 
     /// Renders the text from the SubRip Subtitle format.
+    ///
+    /// ## Example
+    /// ```
+    /// use subtp::srt::SubRip;
+    /// use subtp::srt::SrtSubtitle;
+    /// use subtp::srt::SrtTimestamp;
+    ///
+    /// let subrip = SubRip {
+    ///     subtitles: vec![
+    ///         SrtSubtitle {
+    ///             sequence: 1,
+    ///             start: SrtTimestamp {
+    ///                 hours: 0,
+    ///                 minutes: 0,
+    ///                 seconds: 1,
+    ///                 milliseconds: 0,
+    ///             },
+    ///             end: SrtTimestamp {
+    ///                 hours: 0,
+    ///                 minutes: 0,
+    ///                 seconds: 2,
+    ///                 milliseconds: 0,
+    ///             },
+    ///             text: vec!["Hello, world!".to_string()],
+    ///         }
+    ///     ],
+    /// };
+    ///
+    /// let rendered = subrip.render();
+    /// ```
     pub fn render(&self) -> String {
         self.to_string()
     }
@@ -130,6 +213,54 @@ impl Iterator for SubRip {
 }
 
 /// The subtitle entry.
+///
+/// ## Example
+/// ```
+/// use subtp::srt::SrtSubtitle;
+/// use subtp::srt::SrtTimestamp;
+///
+/// let subtitle = SrtSubtitle {
+///     sequence: 1,
+///     start: SrtTimestamp {
+///         hours: 0,
+///         minutes: 0,
+///         seconds: 1,
+///         milliseconds: 0,
+///     },
+///     end: SrtTimestamp {
+///         hours: 0,
+///         minutes: 0,
+///         seconds: 2,
+///         milliseconds: 0,
+///     },
+///     text: vec!["Hello, world!".to_string()],
+/// };
+///
+/// assert_eq!(
+///     subtitle.to_string(),
+///     "1\n00:00:01,000 --> 00:00:02,000\nHello, world!\n".to_string()
+/// );
+/// ```
+///
+/// or using `Default` as follows:
+///
+/// ```
+/// use subtp::srt::SrtSubtitle;
+/// use subtp::srt::SrtTimestamp;
+///
+/// let subtitle = SrtSubtitle {
+///     sequence: 1,
+///     start: SrtTimestamp {
+///         seconds: 1,
+///         ..Default::default()
+///     },
+///     end: SrtTimestamp {
+///         seconds: 2,
+///         ..Default::default()
+///     },
+///     text: vec!["Hello, world!".to_string()],
+/// };
+/// ```
 #[derive(Debug, Clone, Eq, Hash)]
 pub struct SrtSubtitle {
     /// The sequence number.
@@ -198,6 +329,34 @@ impl Display for SrtSubtitle {
 }
 
 /// The timestamp.
+///
+/// ## Example
+/// ```
+/// use subtp::srt::SrtTimestamp;
+///
+/// let timestamp = SrtTimestamp {
+///     hours: 0,
+///     minutes: 0,
+///     seconds: 1,
+///     milliseconds: 0,
+/// };
+///
+/// assert_eq!(
+///     timestamp.to_string(),
+///     "00:00:01,000".to_string()
+/// );
+/// ```
+///
+/// or using `Default` as follows:
+///
+/// ```
+/// use subtp::srt::SrtTimestamp;
+///
+/// let timestamp = SrtTimestamp {
+///     seconds: 1,
+///     ..Default::default()
+/// };
+/// ```
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct SrtTimestamp {
     /// The hours.

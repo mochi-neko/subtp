@@ -1,7 +1,8 @@
 //! # subtp
 //! A parser for subtitle files such as the SubRip Subtitle (.srt) and the WebVTT (.vtt).
 //!
-//! See [srt](`crate::srt`) and [vtt](`crate::vtt`) for more information.
+//! - [SuRip Subtitle (.srt)](`crate::srt::SubRip`)
+//! - [WebVTT (.vtt)](`crate::vtt::WebVtt`)
 
 // Re-exports.
 pub use error::ParseError;
