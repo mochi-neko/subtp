@@ -67,7 +67,7 @@
 //! ```
 
 use std::fmt::Display;
-use std::ops::{Add, Sub};
+use std::time::Duration;
 
 /// The WebVTT (`.vtt`) format.
 ///
@@ -944,32 +944,14 @@ impl Display for VttTimestamp {
     }
 }
 
-impl Add for VttTimestamp {
-    type Output = Self;
+impl From<Duration> for VttTimestamp {
+    fn from(duration: Duration) -> Self {
+        let seconds = duration.as_secs();
+        let milliseconds = duration.subsec_millis() as u16;
 
-    fn add(
-        self,
-        rhs: Self,
-    ) -> Self::Output {
-        let mut milliseconds = self.milliseconds + rhs.milliseconds;
-        let mut seconds = self.seconds + rhs.seconds;
-        let mut minutes = self.minutes + rhs.minutes;
-        let mut hours = self.hours + rhs.hours;
-
-        if milliseconds >= 1000 {
-            milliseconds -= 1000;
-            seconds += 1;
-        }
-
-        if seconds >= 60 {
-            seconds -= 60;
-            minutes += 1;
-        }
-
-        if minutes >= 60 {
-            minutes -= 60;
-            hours += 1;
-        }
+        let hours = (seconds / 3600) as u8;
+        let minutes = ((seconds % 3600) / 60) as u8;
+        let seconds = (seconds % 60) as u8;
 
         Self {
             hours,
@@ -980,40 +962,14 @@ impl Add for VttTimestamp {
     }
 }
 
-impl Sub for VttTimestamp {
-    type Output = Self;
-
-    fn sub(
-        self,
-        rhs: Self,
-    ) -> Self::Output {
-        let mut milliseconds =
-            self.milliseconds as i16 - rhs.milliseconds as i16;
-        let mut seconds = self.seconds as i16 - rhs.seconds as i16;
-        let mut minutes = self.minutes as i16 - rhs.minutes as i16;
-        let mut hours = self.hours as i16 - rhs.hours as i16;
-
-        if milliseconds < 0 {
-            milliseconds += 1000;
-            seconds -= 1;
-        }
-
-        if seconds < 0 {
-            seconds += 60;
-            minutes -= 1;
-        }
-
-        if minutes < 0 {
-            minutes += 60;
-            hours -= 1;
-        }
-
-        Self {
-            hours: hours as u8,
-            minutes: minutes as u8,
-            seconds: seconds as u8,
-            milliseconds: milliseconds as u16,
-        }
+impl Into<Duration> for VttTimestamp {
+    fn into(self) -> Duration {
+        Duration::new(
+            self.hours as u64 * 3600
+                + self.minutes as u64 * 60
+                + self.seconds as u64,
+            self.milliseconds as u32 * 1_000_000,
+        )
     }
 }
 
@@ -2041,5 +1997,89 @@ video::cue {
         };
         let expected = "REGION\nid:region\nwidth:50%\n";
         assert_eq!(region.to_string(), expected);
+    }
+
+    #[test]
+    fn from_duration_to_timestamp() {
+        let duration = Duration::new(1, 0);
+        let timestamp: VttTimestamp = duration.into();
+        assert_eq!(
+            timestamp,
+            VttTimestamp {
+                seconds: 1,
+                ..Default::default()
+            }
+        );
+
+        let duration = Duration::new(1, 500_000_000);
+        let timestamp: VttTimestamp = duration.into();
+        assert_eq!(
+            timestamp,
+            VttTimestamp {
+                seconds: 1,
+                milliseconds: 500,
+                ..Default::default()
+            }
+        );
+    }
+
+    #[test]
+    fn from_timestamp_to_duration() {
+        let timestamp = VttTimestamp {
+            seconds: 1,
+            ..Default::default()
+        };
+        let duration: Duration = timestamp.into();
+        assert_eq!(duration, Duration::new(1, 0));
+
+        let timestamp = VttTimestamp {
+            seconds: 1,
+            milliseconds: 500,
+            ..Default::default()
+        };
+        let duration: Duration = timestamp.into();
+        assert_eq!(duration, Duration::new(1, 500_000_000));
+    }
+
+    #[test]
+    fn operate_timestamp_via_duration() {
+        let start: Duration = VttTimestamp {
+            seconds: 1,
+            ..Default::default()
+        }
+        .into();
+
+        let end: Duration = VttTimestamp {
+            seconds: 4,
+            ..Default::default()
+        }
+        .into();
+
+        let duration = end - start;
+        assert_eq!(duration, Duration::new(3, 0));
+
+        let timestamp: VttTimestamp = (start + duration).into();
+        assert_eq!(
+            timestamp,
+            VttTimestamp {
+                seconds: 4,
+                ..Default::default()
+            }
+        );
+    }
+
+    #[test]
+    fn order_timestamp() {
+        let start = VttTimestamp {
+            seconds: 1,
+            ..Default::default()
+        };
+
+        let end = VttTimestamp {
+            seconds: 4,
+            ..Default::default()
+        };
+
+        assert!(start < end);
     }
 }

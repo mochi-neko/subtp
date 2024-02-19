@@ -1,4 +1,4 @@
-//! A parser for the SubRip Subtitle (`.srt`) format provided by [`subtp::srt::SubRip`](crate::srt::SubRip).
+//! A parser for the SubRip Subtitle (`.srt`) format provided by [`subtp::srt::SubRip`](SubRip).
 //!
 //! ## Example
 //! ```
@@ -63,7 +63,6 @@
 
 use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
-use std::ops::{Add, Sub};
 use std::time::Duration;
 
 use crate::str_parser;
@@ -71,8 +70,8 @@ use crate::ParseResult;
 
 /// The SubRip Subtitle (`.srt`) format.
 ///
-/// Parses from text by [`SubRip::parse`](crate::srt::SubRip::parse)
-/// and renders to text by [`SubRip::render`](crate::srt::SubRip::render).
+/// Parses from text by [`SubRip::parse`](SubRip::parse)
+/// and renders to text by [`SubRip::render`](SubRip::render).
 ///
 /// ## Example
 /// ```
@@ -399,79 +398,6 @@ impl Display for SrtTimestamp {
     }
 }
 
-impl Add for SrtTimestamp {
-    type Output = Self;
-
-    fn add(
-        self,
-        rhs: Self,
-    ) -> Self::Output {
-        let mut milliseconds = self.milliseconds + rhs.milliseconds;
-        let mut seconds = self.seconds + rhs.seconds;
-        let mut minutes = self.minutes + rhs.minutes;
-        let mut hours = self.hours + rhs.hours;
-
-        if milliseconds >= 1000 {
-            milliseconds -= 1000;
-            seconds += 1;
-        }
-
-        if seconds >= 60 {
-            seconds -= 60;
-            minutes += 1;
-        }
-
-        if minutes >= 60 {
-            minutes -= 60;
-            hours += 1;
-        }
-
-        Self {
-            hours,
-            minutes,
-            seconds,
-            milliseconds,
-        }
-    }
-}
-
-impl Sub for SrtTimestamp {
-    type Output = Self;
-
-    fn sub(
-        self,
-        rhs: Self,
-    ) -> Self::Output {
-        let mut milliseconds =
-            self.milliseconds as i32 - rhs.milliseconds as i32;
-        let mut seconds = self.seconds as i32 - rhs.seconds as i32;
-        let mut minutes = self.minutes as i32 - rhs.minutes as i32;
-        let mut hours = self.hours as i32 - rhs.hours as i32;
-
-        if milliseconds < 0 {
-            milliseconds += 1000;
-            seconds -= 1;
-        }
-
-        if seconds < 0 {
-            seconds += 60;
-            minutes -= 1;
-        }
-
-        if minutes < 0 {
-            minutes += 60;
-            hours -= 1;
-        }
-
-        Self {
-            hours: hours as u8,
-            minutes: minutes as u8,
-            seconds: seconds as u8,
-            milliseconds: milliseconds as u16,
-        }
-    }
-}
-
 impl From<Duration> for SrtTimestamp {
     fn from(duration: Duration) -> Self {
         let seconds = duration.as_secs();
@@ -493,9 +419,9 @@ impl From<Duration> for SrtTimestamp {
 impl Into<Duration> for SrtTimestamp {
     fn into(self) -> Duration {
         Duration::new(
-            u64::from(self.hours) * 3600
-                + u64::from(self.minutes) * 60
-                + u64::from(self.seconds),
+            self.hours as u64 * 3600
+                + self.minutes as u64 * 60
+                + self.seconds as u64,
             self.milliseconds as u32 * 1_000_000,
         )
     }
@@ -765,7 +691,7 @@ This is a test.
     }
 
     #[test]
-    fn ordering_subtitle() {
+    fn order_subtitle() {
         let subtitle1 = SrtSubtitle {
             sequence: 1,
             start: SrtTimestamp {
@@ -872,17 +798,70 @@ This is a test.
         };
         let duration: Duration = timestamp.into();
         assert_eq!(duration, Duration::new(3661, 0));
+    }
 
-        let timestamp = SrtTimestamp {
-            hours: 1,
-            minutes: 1,
+    #[test]
+    fn operate_timestamp_via_duration() {
+        let start: Duration = SrtTimestamp {
+            hours: 0,
+            minutes: 0,
             seconds: 1,
-            milliseconds: 500,
-        };
-        let duration: Duration = timestamp.into();
+            milliseconds: 0,
+        }
+        .into();
+
+        let end: Duration = SrtTimestamp {
+            hours: 0,
+            minutes: 0,
+            seconds: 5,
+            milliseconds: 0,
+        }
+        .into();
+
+        let duration: Duration = end - start;
+        assert_eq!(duration, Duration::new(4, 0));
+
+        let duration: SrtTimestamp = duration.into();
         assert_eq!(
             duration,
-            Duration::new(3661, 500 * 1_000_000)
+            SrtTimestamp {
+                hours: 0,
+                minutes: 0,
+                seconds: 4,
+                milliseconds: 0,
+            }
         );
+
+        let end = end + Duration::new(1, 0);
+        let duration: Duration = end - start;
+        assert_eq!(duration, Duration::new(5, 0));
+
+        let duration: SrtTimestamp = duration.into();
+        assert_eq!(
+            duration,
+            SrtTimestamp {
+                hours: 0,
+                minutes: 0,
+                seconds: 5,
+                milliseconds: 0,
+            }
+        );
+    }
+
+    #[test]
+    fn order_timestamp() {
+        let timestamp1 = SrtTimestamp {
+            hours: 0,
+            minutes: 0,
+            seconds: 1,
+            milliseconds: 0,
+        };
+        let timestamp2 = SrtTimestamp {
+            hours: 0,
+            minutes: 0,
+            seconds: 2,
+            milliseconds: 0,
+        };
+        assert!(timestamp1 < timestamp2);
     }
 }
