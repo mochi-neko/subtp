@@ -27,67 +27,43 @@ peg::parser! {
         use crate::vtt::VttDescription;
 
         /// Whitespace.
-        pub(crate) rule whitespace() = [' ' | '\t']
-
-        /// Zero or more whitespaces.
-        pub(crate) rule whitespaces() = quiet!{ whitespace()* }
-
-        /// One or more whitespaces.
-        pub(crate) rule some_whitespaces() = whitespace()+
+        rule whitespace() = [' ' | '\t']
 
         /// Newline.
-        pub(crate) rule newline() = "\r\n" / "\n" / "\r"
-
-        /// Zero or more newlines.
-        pub(crate) rule newlines() = quiet!{ newline()* }
-
-        /// One or more newlines.
-        pub(crate) rule some_newlines() = newline()+
-
-        /// Whitespace or newline.
-        pub(crate) rule whitespace_or_newline() = [' ' | '\t' | '\r' | '\n']
-
-        /// Zero or more whitespaces or newlines.
-        pub(crate) rule whitespaces_or_newlines() = quiet!{ whitespace_or_newline()* }
-
-        /// One or more whitespaces or one newline.
-        pub(crate) rule some_whitespaces_or_newline() = some_whitespaces() / newline()
-
-        /// One or more whitespaces or newlines.
-        pub(crate) rule some_whitespaces_or_newlines() = whitespace_or_newline()+
+        rule newline() = "\r\n" / "\n" / "\r"
 
         /// Any-digit number.
-        pub(crate) rule number() -> u32
+        rule number() -> u32
             = n:$(['0'..='9']+) {?
-                n.parse().or(Err("number"))
+                n.parse().or(Err("number in u32"))
             }
 
         /// Signed integer.
-        pub(crate) rule int() -> i32
+        rule int() -> i32
             = n:$(['+' | '-']? ['0'..='9']+) {?
                 n.parse().or(Err("signed number"))
             }
 
         /// Two-digit number.
-        pub(crate) rule two_number() -> u8
+        rule two_number() -> u8
             = n:$(['0'..='9']['0'..='9']) {?
                 n.parse().or(Err("two-digit number"))
             }
 
         /// Three-digit number.
-        pub(crate) rule three_number() -> u16
+        rule three_number() -> u16
             = n:$(['0'..='9']['0'..='9']['0'..='9']) {?
                 n.parse().or(Err("three-digit number"))
             }
 
         /// Floating number.
-        pub(crate) rule float() -> f32
+        rule float() -> f32
             = n:$(['0'..='9']+ "." ['0'..='9']+) {?
-                n.parse().or(Err("Invalid float"))
+                n.parse().or(Err("float"))
             }
 
         /// Percentage of integer number.
-        pub(crate) rule percentage_int() -> u32
+        rule percentage_int() -> u32
             = n:number() "%" {?
                 if n <= 100 {
                     Ok(n)
@@ -97,7 +73,7 @@ peg::parser! {
             }
 
         /// Percentage of floating number.
-        pub(crate) rule percentage_float() -> f32
+        rule percentage_float() -> f32
             = f:float() "%" {?
                 if f >= 0.0 && f <= 100.0 {
                     Ok(f)
@@ -107,67 +83,49 @@ peg::parser! {
             }
 
         /// Percentage.
-        pub(crate) rule percentage() -> f32
-            = p:percentage_int() { p as f32 }
-            / p:percentage_float() { p }
+        rule percentage() -> Percentage
+            = p:percentage_int() { Percentage { value: p as f32 } }
+                / p:percentage_float() { Percentage { value: p } }
 
         /// Anchor.
-        pub(crate) rule anchor() -> (f32, f32)
+        rule anchor() -> Anchor
             = x:percentage() "," y:percentage()
             {
-                (x, y)
+                Anchor {
+                    x,
+                    y,
+                }
             }
 
         /// Sequential text.
-        pub(crate) rule sequence() -> String
-            = t:$((!whitespace_or_newline() [_])+)
+        rule sequence() -> String
+            = t:$((!(whitespace() / newline()) [_])+)
             {
                 t.to_string()
             }
 
         /// Block of text.
-        pub(crate) rule text_block() -> String
+        rule text_block() -> String
             = !newline() lines:$((!newline() [_])+ newline()) ++ ()
             {
                 lines.join("").to_string()
             }
 
         /// Single text with newline.
-        pub(crate) rule line() -> String
-            = !whitespace_or_newline() t:$((!newline() [_])+) newline()
+        rule line() -> String
+            = !(whitespace() / newline()) t:$((!newline() [_])+) newline()
             {
                 t.to_string().trim().to_string()
             }
 
         /// Multiple lines.
-        pub(crate) rule multiline() -> Vec<String>
-            = !whitespace_or_newline() lines:$((!newline() [_])+ newline()) ** ()
-            {?
-                let lines = lines
+        rule multiline() -> Vec<String>
+            = !((whitespace() / newline())+) lines:$((!newline() [_])+ newline()) ++ ()
+            {
+                lines
                     .iter()
                     .map(|l| l.to_string().trim().to_string())
-                    .collect::<Vec<String>>();
-
-                if !lines.is_empty() {
-                    Ok(lines)
-                } else {
-                    Err("Empty multiline")
-                }
-            }
-
-        /// Percentage struct.
-        rule percentage_struct() -> Percentage
-            = p:percentage() {
-                Percentage { value: p }
-            }
-
-        /// Anchor struct.
-        rule anchor_struct() -> Anchor
-            = anchor:anchor() {
-                Anchor {
-                    x: Percentage { value: anchor.0 },
-                    y: Percentage { value: anchor.1 },
-                }
+                    .collect()
             }
 
         /// Timestamp.
@@ -201,14 +159,14 @@ peg::parser! {
 
         /// Timings
         pub(crate) rule timings() -> VttTimings
-            = start:timestamp() whitespaces() "-->" whitespaces() end:timestamp()
+            = start:timestamp() whitespace()* "-->" whitespace()* end:timestamp()
             {
                 VttTimings { start, end }
             }
 
         /// Cue settings
         pub(crate) rule cue_settings() -> CueSettings
-            = options:sequence() ** some_whitespaces() {?
+            = options:sequence() ** (whitespace()+) {?
                 let mut settings = CueSettings::default();
                 for option in options {
                     if let Ok(region) = cue_region(option.as_str()) {
@@ -253,12 +211,12 @@ peg::parser! {
             }
 
         rule cue_line_percentage() -> Line
-            = "line:" p:percentage_struct() {
+            = "line:" p:percentage() {
                 Line::Percentage(p, None)
             }
 
         rule cue_line_percentage_with_aligment() -> Line
-            = "line:" p:percentage_struct() "," align:cue_line_alignment() {
+            = "line:" p:percentage() "," align:cue_line_alignment() {
                 Line::Percentage(p, Some(align))
             }
 
@@ -278,7 +236,7 @@ peg::parser! {
                 / cue_position_without_alignment()
 
         rule cue_position_without_alignment() -> Position
-            = "position:" p:percentage_struct()
+            = "position:" p:percentage()
             {
                 Position {
                     value: p,
@@ -287,7 +245,7 @@ peg::parser! {
             }
 
         rule cue_position_with_alignment() -> Position
-            = "position:" p:percentage_struct() "," align:cue_position_alignment()
+            = "position:" p:percentage() "," align:cue_position_alignment()
             {?
                 Ok(Position {
                     value: p,
@@ -307,7 +265,7 @@ peg::parser! {
 
         /// Cue size setting.
         pub(crate) rule cue_size() -> Percentage
-            = "size:" p:percentage_struct() { p }
+            = "size:" p:percentage() { p }
 
         /// Cue align setting.
         pub(crate) rule cue_align() -> Alignment
@@ -335,8 +293,8 @@ peg::parser! {
 
         /// Minimal cue block
         rule cue_minimal() -> VttCue
-            = whitespaces() timings:timings() whitespaces() newline()
-                whitespaces() payload:multiline()
+            = whitespace()* timings:timings() whitespace()* newline()
+                whitespace()* payload:multiline()
             {
                 VttCue {
                     identifier: None,
@@ -348,9 +306,9 @@ peg::parser! {
 
         /// Cue block with an identifier.
         rule cue_with_identifier() -> VttCue
-            = whitespaces() identifier:line()
-                whitespaces() timings:timings() whitespaces() newline()
-                whitespaces() payload:multiline()
+            = whitespace()* identifier:line()
+                whitespace()* timings:timings() whitespace()* newline()
+                whitespace()* payload:multiline()
             {
                 VttCue {
                     identifier: Some(identifier),
@@ -362,8 +320,8 @@ peg::parser! {
 
         /// Cue block with settings.
         rule cue_with_settings() -> VttCue
-            = whitespaces() timings:timings() some_whitespaces() settings:cue_settings() whitespaces() newline()
-                whitespaces() payload:multiline()
+            = whitespace()* timings:timings() whitespace()+ settings:cue_settings() whitespace()* newline()
+                whitespace()* payload:multiline()
             {
                 VttCue {
                     identifier: None,
@@ -375,9 +333,9 @@ peg::parser! {
 
         /// Cue block with an identifier and settings.
         rule cue_with_identifier_and_settings() -> VttCue
-            = whitespaces() identifier:line()
-                whitespaces() timings:timings() some_whitespaces() settings:cue_settings() whitespaces() newline()
-                whitespaces() payload:multiline()
+            = whitespace()* identifier:line()
+                whitespace()* timings:timings() whitespace()+ settings:cue_settings() whitespace()* newline()
+                whitespace()* payload:multiline()
             {
                 VttCue {
                     identifier: Some(identifier),
@@ -393,14 +351,14 @@ peg::parser! {
 
         /// Single line comment.
         rule comment_side() -> VttComment
-            = "NOTE" some_whitespaces() comment:line()
+            = "NOTE" whitespace()+ comment:line()
             {
                 VttComment::Side(comment)
             }
 
         /// Multiple lines comment block.
         rule comment_below() -> VttComment
-            = "NOTE" whitespaces() newline()
+            = "NOTE" whitespace()* newline()
                 comments:multiline()
             {
                 VttComment::Below(comments.join("\n"))
@@ -408,14 +366,14 @@ peg::parser! {
 
         /// Multiple lines comment block across a line.
         rule comment_across() -> VttComment
-            = "NOTE" some_whitespaces() comments:multiline()
+            = "NOTE" whitespace()+ comments:multiline()
             {
                 VttComment::Side(comments.join("\n"))
             }
 
         /// Style block.
         pub(crate) rule style() -> VttStyle
-            = whitespaces() "STYLE" whitespaces() newline()
+            = "STYLE" whitespace()* newline()
                 style:text_block()
             {
                 VttStyle { style }
@@ -423,7 +381,7 @@ peg::parser! {
 
         /// Parses a region block.
         pub(crate) rule region() -> VttRegion
-            = "REGION" whitespaces() newline()
+            = "REGION" whitespace()* newline()
                 options:sequence() ** newline() newline()
             {?
                 let mut region = VttRegion::default();
@@ -451,16 +409,16 @@ peg::parser! {
             = "id:" id:sequence() { id }
 
         pub(crate) rule region_width() -> Percentage
-            = "width:" width:percentage_struct() { width }
+            = "width:" width:percentage() { width }
 
         pub(crate) rule region_lines() -> u32
             = "lines:" lines:number() { lines }
 
         pub(crate) rule region_region_anchor() -> Anchor
-            = "regionanchor:" region_anchor:anchor_struct() { region_anchor }
+            = "regionanchor:" region_anchor:anchor() { region_anchor }
 
         pub(crate) rule region_viewport_anchor() -> Anchor
-            = "viewportanchor:" viewport_anchor:anchor_struct() { viewport_anchor }
+            = "viewportanchor:" viewport_anchor:anchor() { viewport_anchor }
 
         pub(crate) rule region_scroll() -> Scroll
             = "scroll:up" { Scroll::Up }
@@ -491,19 +449,19 @@ peg::parser! {
                 / header_minimal()
 
         rule header_minimal() -> VttHeader
-            = "WEBVTT" whitespaces() newline()
+            = "WEBVTT" whitespace()* newline()
             {
                 VttHeader { description: None }
             }
 
         rule header_with_side_descruption() -> VttHeader
-            = "WEBVTT" whitespaces() description:text_block()
+            = "WEBVTT" whitespace()* description:text_block()
             {
                 VttHeader { description: Some(VttDescription::Side(description)) }
             }
 
         rule header_with_below_description() -> VttHeader
-            = "WEBVTT" whitespaces() newline()
+            = "WEBVTT" whitespace()* newline()
                 description:text_block()
             {
                 VttHeader { description: Some(VttDescription::Below(description)) }
@@ -512,8 +470,9 @@ peg::parser! {
         /// The entire WebVTT file.
         pub(crate) rule vtt() -> WebVtt
             = header:header() newline()
-                blocks:block() ** some_whitespaces_or_newlines()
-                whitespaces_or_newlines()
+                (whitespace() / newline())*
+                blocks:block() ** (newline()+)
+                (whitespace() / newline())*
             {
                 WebVtt {
                     header,

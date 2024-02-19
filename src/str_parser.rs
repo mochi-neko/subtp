@@ -43,7 +43,7 @@ peg::parser! {
                 lines
                     .iter()
                     .map(|l| l.to_string().trim().to_string())
-                    .collect::<Vec<String>>()
+                    .collect()
             }
 
         /// Timestamp.
