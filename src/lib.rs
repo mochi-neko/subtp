@@ -14,7 +14,6 @@ pub mod vtt;
 
 // Internal modules.
 mod error;
-mod general;
 mod result;
 mod str_parser;
 mod vtt_parser;

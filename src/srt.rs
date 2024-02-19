@@ -64,6 +64,7 @@
 use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
 use std::ops::{Add, Sub};
+use std::time::Duration;
 
 use crate::str_parser;
 use crate::ParseResult;
@@ -269,7 +270,7 @@ pub struct SrtSubtitle {
     pub start: SrtTimestamp,
     /// The end timestamp.
     pub end: SrtTimestamp,
-    /// The text.
+    /// The subtitle text.
     pub text: Vec<String>,
 }
 
@@ -356,6 +357,11 @@ impl Display for SrtSubtitle {
 ///     seconds: 1,
 ///     ..Default::default()
 /// };
+///
+/// assert_eq!(
+///     timestamp.to_string(),
+///     "00:00:01,000".to_string()
+/// );
 /// ```
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct SrtTimestamp {
@@ -463,6 +469,35 @@ impl Sub for SrtTimestamp {
             seconds: seconds as u8,
             milliseconds: milliseconds as u16,
         }
+    }
+}
+
+impl From<Duration> for SrtTimestamp {
+    fn from(duration: Duration) -> Self {
+        let seconds = duration.as_secs();
+        let milliseconds = duration.subsec_millis() as u16;
+
+        let hours = (seconds / 3600) as u8;
+        let minutes = ((seconds % 3600) / 60) as u8;
+        let seconds = (seconds % 60) as u8;
+
+        Self {
+            hours,
+            minutes,
+            seconds,
+            milliseconds,
+        }
+    }
+}
+
+impl Into<Duration> for SrtTimestamp {
+    fn into(self) -> Duration {
+        Duration::new(
+            u64::from(self.hours) * 3600
+                + u64::from(self.minutes) * 60
+                + u64::from(self.seconds),
+            self.milliseconds as u32 * 1_000_000,
+        )
     }
 }
 
@@ -764,5 +799,90 @@ This is a test.
             text: vec!["Second".to_string()],
         };
         assert!(subtitle1 < subtitle2);
+    }
+
+    #[test]
+    fn display_timestamp() {
+        let timestamp = SrtTimestamp {
+            hours: 0,
+            minutes: 0,
+            seconds: 1,
+            milliseconds: 0,
+        };
+        let displayed = format!("{}", timestamp);
+        let expected = "00:00:01,000";
+        assert_eq!(displayed, expected);
+    }
+
+    #[test]
+    fn from_duration_to_timestamp() {
+        let duration = Duration::new(1, 0);
+        let timestamp: SrtTimestamp = duration.into();
+        assert_eq!(
+            timestamp,
+            SrtTimestamp {
+                hours: 0,
+                minutes: 0,
+                seconds: 1,
+                milliseconds: 0,
+            }
+        );
+
+        let duration = Duration::new(3661, 0);
+        let timestamp: SrtTimestamp = duration.into();
+        assert_eq!(
+            timestamp,
+            SrtTimestamp {
+                hours: 1,
+                minutes: 1,
+                seconds: 1,
+                milliseconds: 0,
+            }
+        );
+
+        let duration = Duration::new(3661, 500 * 1_000_000);
+        let timestamp: SrtTimestamp = duration.into();
+        assert_eq!(
+            timestamp,
+            SrtTimestamp {
+                hours: 1,
+                minutes: 1,
+                seconds: 1,
+                milliseconds: 500,
+            }
+        );
+    }
+
+    #[test]
+    fn from_timestamp_to_duration() {
+        let timestamp = SrtTimestamp {
+            hours: 0,
+            minutes: 0,
+            seconds: 1,
+            milliseconds: 0,
+        };
+        let duration: Duration = timestamp.into();
+        assert_eq!(duration, Duration::new(1, 0));
+
+        let timestamp = SrtTimestamp {
+            hours: 1,
+            minutes: 1,
+            seconds: 1,
+            milliseconds: 0,
+        };
+        let duration: Duration = timestamp.into();
+        assert_eq!(duration, Duration::new(3661, 0));
+
+        let timestamp = SrtTimestamp {
+            hours: 1,
+            minutes: 1,
+            seconds: 1,
+            milliseconds: 500,
+        };
+        let duration: Duration = timestamp.into();
+        assert_eq!(
+            duration,
+            Duration::new(3661, 500 * 1_000_000)
+        );
     }
 }

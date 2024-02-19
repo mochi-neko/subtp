@@ -12,65 +12,38 @@ peg::parser! {
         /// Whitespace.
         rule whitespace() = [' ' | '\t']
 
-        /// Zero or more whitespaces.
-        pub(crate) rule whitespaces() = quiet!{ whitespace()* }
-
-        /// One or more whitespaces.
-        pub(crate) rule some_whitespaces() = whitespace()+
-
         /// Newline.
-        pub(crate) rule newline() = "\r\n" / "\n" / "\r"
+        rule newline() = "\r\n" / "\n" / "\r"
 
-        /// Zero or more newlines.
-        pub(crate) rule newlines() = quiet!{ newline()* }
-
-        /// One or more newlines.
-        pub(crate) rule some_newlines() = newline()+
-
-        /// Whitespace or newline.
-        pub(crate) rule whitespace_or_newline() = [' ' | '\t' | '\r' | '\n']
-
-        /// Zero or more whitespaces or newlines.
-        pub(crate) rule whitespaces_or_newlines() = quiet!{ whitespace_or_newline()* }
-
-        /// One or more whitespaces or one newline.
-        pub(crate) rule some_whitespaces_or_newline() = some_whitespaces() / newline()
-
-        /// One or more whitespaces or newlines.
-        pub(crate) rule some_whitespaces_or_newlines() = whitespace_or_newline()+
+        /// Whitespaces and/or newline without two or more newlines.
+        rule separator() = !(newline() newline()) (whitespace() / newline())+
 
         /// Any-digit number.
-        pub(crate) rule number() -> u32
+        rule number() -> u32
             = n:$(['0'..='9']+) {?
-                n.parse().or(Err("number"))
+                n.parse().or(Err("number in u32"))
             }
 
         /// Two-digit number.
-        pub(crate) rule two_number() -> u8
+        rule two_number() -> u8
             = n:$(['0'..='9']['0'..='9']) {?
                 n.parse().or(Err("two-digit number"))
             }
 
         /// Three-digit number.
-        pub(crate) rule three_number() -> u16
+        rule three_number() -> u16
             = n:$(['0'..='9']['0'..='9']['0'..='9']) {?
                 n.parse().or(Err("three-digit number"))
             }
 
         /// Multiple lines block of text.
-        pub(crate) rule multiline() -> Vec<String>
-            = !whitespace_or_newline() lines:$((!newline() [_])+ newline()) ** ()
-            {?
-                let lines = lines
+        rule multiline() -> Vec<String>
+            = !((whitespace() / newline())+) lines:$((!newline() [_])+ newline()) ++ ()
+            {
+                lines
                     .iter()
                     .map(|l| l.to_string().trim().to_string())
-                    .collect::<Vec<String>>();
-
-                if !lines.is_empty() {
-                    Ok(lines)
-                } else {
-                    Err("Empty multiline")
-                }
+                    .collect::<Vec<String>>()
             }
 
         /// Timestamp.
@@ -87,18 +60,18 @@ peg::parser! {
 
         /// Single subtitle entry.
         pub(crate) rule subtitle() -> SrtSubtitle
-            = whitespaces() sequence:number() whitespaces() newline()
-                whitespaces() start:timestamp() whitespaces() "-->" whitespaces() end:timestamp() whitespaces() newline()
-                whitespaces() text:multiline()
+            = sequence:number() separator()
+                start:timestamp() whitespace()* "-->" whitespace()* end:timestamp() separator()
+                text:multiline()
             {
                 SrtSubtitle { sequence, start, end, text }
             }
 
         /// The entire SRT.
         pub(crate) rule srt() -> SubRip
-            = whitespaces_or_newlines()
-                subtitles:subtitle() ** some_whitespaces_or_newlines()
-                whitespaces_or_newlines()
+            = (whitespace() / newline())*
+                subtitles:subtitle() ** (newline()+)
+                (whitespace() / newline())*
             {
                 SubRip { subtitles, }
             }
@@ -211,7 +184,7 @@ mod test {
         // Allow whitespaces.
         assert_eq!(
             srt_parser::subtitle(
-                " 1 \n 00:00:00,000  -->  00:00:01,000 \n \tHello, world! \n"
+                "1 \n 00:00:00,000  -->  00:00:01,000 \n \tHello, world! \n"
             )
             .unwrap(),
             subtitle
@@ -226,14 +199,18 @@ mod test {
             subtitle
         );
 
+        // Allow separator with whitespaces.
+        assert_eq!(
+            srt_parser::subtitle(
+                "1 00:00:00,000 --> 00:00:01,000 Hello, world!\n"
+            )
+            .unwrap(),
+            subtitle
+        );
+
         // Prohibit spaces or new lines in header.
         assert!(srt_parser::subtitle(
             "\n1\n00:00:00,000 --> 00:00:01,000\nHello, world!\n"
-        )
-        .is_err());
-        // Must be separated by newlines.
-        assert!(srt_parser::subtitle(
-            "1 00:00:00,000 --> 00:00:01,000 Hello, world!\n"
         )
         .is_err());
         // Prohibit two or more newlines.
@@ -249,6 +226,11 @@ mod test {
             "1\n00:00:00,000 --> 00:00:01,000\nHello, world!\n\n"
         )
         .is_err());
+        // Prohibit empty text.
+        assert!(
+            srt_parser::subtitle("1\n00:00:00,000 --> 00:00:01,000\n\n")
+                .is_err()
+        );
     }
 
     #[test]

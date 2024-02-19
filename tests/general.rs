@@ -33,7 +33,7 @@ peg::parser! {
         /// Any-digit number.
         pub(crate) rule number() -> u32
             = n:$(['0'..='9']+) {?
-                n.parse().or(Err("number"))
+                n.parse().or(Err("number in u32"))
             }
 
         /// Signed integer.
