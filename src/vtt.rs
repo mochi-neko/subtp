@@ -1,4 +1,4 @@
-//! A parser for the WebVTT (`.vtt`) format provided by [`subtp::vtt::WebVtt`](crate::vtt::WebVtt).
+//! A parser for the WebVTT (`.vtt`) format provided by [`subtp::vtt::WebVtt`](WebVtt).
 //!
 //! ## Example
 //! ```
@@ -71,8 +71,8 @@ use std::time::Duration;
 
 /// The WebVTT (`.vtt`) format.
 ///
-/// Parses from text by [`WebVtt::parse`](crate::vtt::WebVtt::parse)
-/// and renders to text by [`WebVtt::render`](crate::vtt::WebVtt::render).
+/// Parses from text by [`WebVtt::parse`](WebVtt::parse)
+/// and renders to text by [`WebVtt::render`](WebVtt::render).
 ///
 /// ## Example
 /// ```
@@ -376,7 +376,7 @@ impl Display for VttDescription {
 ///
 /// ## Example
 ///
-/// From [`VttCue`](crate::vtt::VttCue):
+/// From [`VttCue`](VttCue):
 /// ```
 /// use subtp::vtt::VttBlock;
 /// use subtp::vtt::VttCue;
@@ -404,7 +404,7 @@ impl Display for VttDescription {
 /// );
 /// ```
 ///
-/// From [`VttComment`](crate::vtt::VttComment):
+/// From [`VttComment`](VttComment):
 /// ```
 /// use subtp::vtt::VttBlock;
 /// use subtp::vtt::VttComment;
@@ -417,7 +417,7 @@ impl Display for VttDescription {
 /// );
 /// ```
 ///
-/// From [`VttStyle`](crate::vtt::VttStyle):
+/// From [`VttStyle`](VttStyle):
 /// ```
 /// use subtp::vtt::VttBlock;
 /// use subtp::vtt::VttStyle;
@@ -436,7 +436,7 @@ impl Display for VttDescription {
 /// );
 /// ```
 ///
-/// From [`VttRegion`](crate::vtt::VttRegion):
+/// From [`VttRegion`](VttRegion):
 /// ```
 /// use subtp::vtt::VttBlock;
 /// use subtp::vtt::VttRegion;
