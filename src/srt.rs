@@ -34,6 +34,7 @@
 //!                 milliseconds: 0,
 //!             },
 //!             text: vec!["Hello, world!".to_string()],
+//!             line_position: None,
 //!         },
 //!         SrtSubtitle {
 //!             sequence: 2,
@@ -53,6 +54,7 @@
 //!                 "This is a sample.".to_string(),
 //!                 "Thank you for your reading.".to_string()
 //!             ],
+//!             line_position: None,
 //!         },
 //!     ],
 //! });
@@ -96,6 +98,7 @@ use crate::ParseResult;
 ///                 milliseconds: 0,
 ///             },
 ///             text: vec!["Hello, world!".to_string()],
+///             line_position: None,
 ///         }
 ///     ],
 /// };
@@ -159,6 +162,7 @@ impl SubRip {
     ///                 milliseconds: 0,
     ///             },
     ///             text: vec!["Hello, world!".to_string()],
+    ///             line_position: None,
     ///         }
     ///     ],
     /// };
@@ -234,6 +238,7 @@ impl Iterator for SubRip {
 ///         milliseconds: 0,
 ///     },
 ///     text: vec!["Hello, world!".to_string()],
+///     line_position: None,
 /// };
 ///
 /// assert_eq!(
@@ -259,6 +264,7 @@ impl Iterator for SubRip {
 ///         ..Default::default()
 ///     },
 ///     text: vec!["Hello, world!".to_string()],
+///     ..Default::default()
 /// };
 /// ```
 #[derive(Debug, Clone, Eq, Hash)]
@@ -271,6 +277,8 @@ pub struct SrtSubtitle {
     pub end: SrtTimestamp,
     /// The subtitle text.
     pub text: Vec<String>,
+    /// The unofficial line position.
+    pub line_position: Option<LinePosition>,
 }
 
 impl PartialEq<Self> for SrtSubtitle {
@@ -308,6 +316,7 @@ impl Default for SrtSubtitle {
             start: SrtTimestamp::default(),
             end: SrtTimestamp::default(),
             text: vec![],
+            line_position: None,
         }
     }
 }
@@ -427,6 +436,43 @@ impl Into<Duration> for SrtTimestamp {
     }
 }
 
+/// Unofficial line position settings.
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct LinePosition {
+    /// X1 of the line position.
+    pub x1: u32,
+    /// X2 of the line position.
+    pub x2: u32,
+    /// Y1 of the line position.
+    pub y1: u32,
+    /// Y2 of the line position.
+    pub y2: u32,
+}
+
+impl Default for LinePosition {
+    fn default() -> Self {
+        Self {
+            x1: 0,
+            x2: 0,
+            y1: 0,
+            y2: 0,
+        }
+    }
+}
+
+impl Display for LinePosition {
+    fn fmt(
+        &self,
+        f: &mut Formatter<'_>,
+    ) -> std::fmt::Result {
+        write!(
+            f,
+            "X1:{} X2:{} Y1:{} Y2:{}",
+            self.x1, self.x2, self.y1, self.y2
+        )
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -461,6 +507,7 @@ This is a test.
                         milliseconds: 0,
                     },
                     text: vec!["Hello, world!".to_string()],
+                    line_position: None,
                 },
                 SrtSubtitle {
                     sequence: 2,
@@ -477,6 +524,7 @@ This is a test.
                         milliseconds: 0,
                     },
                     text: vec!["This is a test.".to_string()],
+                    line_position: None,
                 },
             ],
         };
@@ -505,6 +553,7 @@ This is a test.
                     milliseconds: 0,
                 },
                 text: vec!["Hello, world!".to_string()],
+                line_position: None,
             }],
         };
         let expected = r#"1
@@ -530,6 +579,7 @@ Hello, world!
                         milliseconds: 0,
                     },
                     text: vec!["Hello, world!".to_string()],
+                    line_position: None,
                 },
                 SrtSubtitle {
                     sequence: 2,
@@ -546,6 +596,7 @@ Hello, world!
                         milliseconds: 0,
                     },
                     text: vec!["This is a test.".to_string()],
+                    line_position: None,
                 },
             ],
         };
@@ -579,6 +630,7 @@ This is a test.
                         milliseconds: 0,
                     },
                     text: vec!["Hello, world!".to_string()],
+                    line_position: None,
                 },
                 SrtSubtitle {
                     sequence: 2,
@@ -595,6 +647,7 @@ This is a test.
                         milliseconds: 0,
                     },
                     text: vec!["This is a test.".to_string()],
+                    line_position: None,
                 },
             ],
         };
@@ -618,6 +671,7 @@ This is a test.
                     milliseconds: 0,
                 },
                 text: vec!["Hello, world!".to_string()],
+                line_position: None,
             })
         );
 
@@ -638,6 +692,7 @@ This is a test.
                     milliseconds: 0,
                 },
                 text: vec!["This is a test.".to_string()],
+                line_position: None,
             })
         );
 
@@ -661,6 +716,7 @@ This is a test.
                 milliseconds: 0,
             },
             text: vec!["Hello, world!".to_string()],
+            line_position: None,
         };
         let displayed = format!("{}", subtitle);
         let expected = "1\n00:00:01,000 --> 00:00:02,000\nHello, world!\n";
@@ -684,6 +740,7 @@ This is a test.
                 "Hello, world!".to_string(),
                 "This is the test.".to_string(),
             ],
+            line_position: None,
         };
         let displayed = format!("{}", subtitle);
         let expected = "1\n00:00:01,000 --> 00:00:02,000\nHello, world!\nThis is the test.\n";
@@ -707,6 +764,7 @@ This is a test.
                 milliseconds: 0,
             },
             text: vec!["First".to_string()],
+            line_position: None,
         };
         let subtitle2 = SrtSubtitle {
             sequence: 2,
@@ -723,6 +781,7 @@ This is a test.
                 milliseconds: 0,
             },
             text: vec!["Second".to_string()],
+            line_position: None,
         };
         assert!(subtitle1 < subtitle2);
     }

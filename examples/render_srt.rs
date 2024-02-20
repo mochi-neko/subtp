@@ -23,6 +23,7 @@ fn main() -> anyhow::Result<()> {
                     ..Default::default()
                 },
                 text: vec!["This is the first subtitle.".to_string()],
+                ..Default::default()
             },
             SrtSubtitle {
                 sequence: 2,
@@ -38,6 +39,7 @@ fn main() -> anyhow::Result<()> {
                     "This is the second subtitle.".to_string(),
                     "Subtitle text can span multiple lines.".to_string(),
                 ],
+                ..Default::default()
             },
         ],
     };
@@ -59,6 +61,7 @@ fn main() -> anyhow::Result<()> {
                 ..Default::default()
             },
             text: vec!["This is the third subtitle.".to_string()],
+            ..Default::default()
         });
     println!("Rendered srt:\n{}", subrip.render());
 

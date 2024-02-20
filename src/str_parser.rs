@@ -8,6 +8,7 @@ peg::parser! {
         use crate::srt::SrtTimestamp;
         use crate::srt::SubRip;
         use crate::srt::SrtSubtitle;
+        use crate::srt::LinePosition;
 
         /// Whitespace.
         rule whitespace() = [' ' | '\t']
@@ -58,13 +59,50 @@ peg::parser! {
                 }
             }
 
+        pub(crate) rule line_position() -> LinePosition
+            = "X1:" x1:number() separator()+
+                "X2:" x2:number() separator()+
+                "Y1:" y1:number() separator()+
+                "Y2:" y2:number()
+            {
+                LinePosition {
+                    x1,
+                    y1,
+                    x2,
+                    y2,
+                }
+            }
+
         /// Single subtitle entry.
         pub(crate) rule subtitle() -> SrtSubtitle
+            = subtitle_with_line_position() / subtitle_without_line_position()
+
+        rule subtitle_without_line_position() -> SrtSubtitle
             = sequence:number() separator()
                 start:timestamp() separator()* "-->" separator()* end:timestamp() separator()
                 text:multiline()
             {
-                SrtSubtitle { sequence, start, end, text }
+                SrtSubtitle {
+                    sequence,
+                    start,
+                    end,
+                    text,
+                    line_position: None,
+                }
+            }
+
+        rule subtitle_with_line_position() -> SrtSubtitle
+            = sequence:number() separator()
+                start:timestamp() separator()* "-->" separator()* end:timestamp() separator()+ line_position:line_position() separator()
+                text:multiline()
+            {
+                SrtSubtitle {
+                    sequence,
+                    start,
+                    end,
+                    text,
+                    line_position: Some(line_position),
+                }
             }
 
         /// The entire SRT.
@@ -162,6 +200,7 @@ mod test {
                 milliseconds: 0,
             },
             text: vec!["Hello, world!".to_string()],
+            line_position: None,
         };
 
         assert_eq!(
@@ -217,6 +256,36 @@ mod test {
             subtitle
         );
 
+        // Allow unofficial line position setting.
+        assert_eq!(
+            srt_parser::subtitle(
+                "1\n00:00:00,000\n-->\n00:00:01,000 X1:1 X2:2 Y1:3 Y2:4\nHello, world!\n"
+            )
+                .unwrap(),
+            SrtSubtitle {
+                sequence: 1,
+                start: SrtTimestamp {
+                    hours: 0,
+                    minutes: 0,
+                    seconds: 0,
+                    milliseconds: 0,
+                },
+                end: SrtTimestamp {
+                    hours: 0,
+                    minutes: 0,
+                    seconds: 1,
+                    milliseconds: 0,
+                },
+                text: vec!["Hello, world!".to_string()],
+                line_position: Some(LinePosition {
+                    x1: 1,
+                    x2: 2,
+                    y1: 3,
+                    y2: 4,
+                }),
+            }
+        );
+
         // Prohibit spaces or new lines in header.
         assert!(srt_parser::subtitle(
             "\n1\n00:00:00,000 --> 00:00:01,000\nHello, world!\n"
@@ -260,6 +329,7 @@ mod test {
                     milliseconds: 0,
                 },
                 text: vec!["Hello, world!".to_string()],
+                line_position: None,
             }],
         };
 
@@ -318,6 +388,7 @@ Hello, world!
                         milliseconds: 0,
                     },
                     text: vec!["Hello, world!".to_string()],
+                    line_position: None,
                 },
                 SrtSubtitle {
                     sequence: 2,
@@ -334,6 +405,7 @@ Hello, world!
                         milliseconds: 0,
                     },
                     text: vec!["This is a test.".to_string()],
+                    line_position: None,
                 },
             ],
         };
