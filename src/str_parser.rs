@@ -38,7 +38,7 @@ peg::parser! {
 
         /// Multiple lines block of text.
         rule multiline() -> Vec<String>
-            = !(whitespace() / newline()) lines:$((!newline() [_])+ newline()) ++ ()
+            = !(whitespace() / newline()) lines:$(!(whitespace()+ newline()) (!newline() [_])+ newline()) ++ ()
             {
                 lines
                     .iter()

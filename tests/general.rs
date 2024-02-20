@@ -3,32 +3,8 @@ peg::parser! {
         /// Whitespace.
         pub(crate) rule whitespace() = [' ' | '\t']
 
-        /// Zero or more whitespaces.
-        pub(crate) rule whitespaces() = quiet!{ whitespace()* }
-
-        /// One or more whitespaces.
-        pub(crate) rule some_whitespaces() = whitespace()+
-
         /// Newline.
         pub(crate) rule newline() = "\r\n" / "\n" / "\r"
-
-        /// Zero or more newlines.
-        pub(crate) rule newlines() = quiet!{ newline()* }
-
-        /// One or more newlines.
-        pub(crate) rule some_newlines() = newline()+
-
-        /// Whitespace or newline.
-        pub(crate) rule whitespace_or_newline() = [' ' | '\t' | '\r' | '\n']
-
-        /// Zero or more whitespaces or newlines.
-        pub(crate) rule whitespaces_or_newlines() = quiet!{ whitespace_or_newline()* }
-
-        /// One or more whitespaces or one newline.
-        pub(crate) rule some_whitespaces_or_newline() = some_whitespaces() / newline()
-
-        /// One or more whitespaces or newlines.
-        pub(crate) rule some_whitespaces_or_newlines() = whitespace_or_newline()+
 
         /// Any-digit number.
         pub(crate) rule number() -> u32
@@ -94,7 +70,7 @@ peg::parser! {
 
         /// Sequential text without space of newline.
         pub(crate) rule sequence() -> String
-            = t:$((!whitespace_or_newline() [_])+)
+            = t:$((!(whitespace() / newline()) [_])+)
             {
                 t.to_string()
             }
@@ -108,25 +84,19 @@ peg::parser! {
 
         /// Single text with newline.
         pub(crate) rule line() -> String
-            = !whitespace_or_newline() t:$((!newline() [_])+) newline()
+            = !(whitespace() / newline()) t:$((!newline() [_])+) newline()
             {
                 t.to_string().trim().to_string()
             }
 
         /// Multiple lines block of text.
         pub(crate) rule multiline() -> Vec<String>
-            = !whitespace_or_newline() lines:$((!newline() [_])+ newline()) ** ()
-            {?
-                let lines = lines
+            = !(whitespace() / newline()) lines:$(!(whitespace()+ newline()) (!newline() [_])+ newline()) ++ ()
+            {
+                lines
                     .iter()
                     .map(|l| l.to_string().trim().to_string())
-                    .collect::<Vec<String>>();
-
-                if !lines.is_empty() {
-                    Ok(lines)
-                } else {
-                    Err("Empty multiline")
-                }
+                    .collect()
             }
     }
 }
@@ -141,24 +111,6 @@ mod test {
     }
 
     #[test]
-    fn whitespaces() {
-        assert!(super::rules::whitespaces("").is_ok());
-        assert!(super::rules::whitespaces(" ").is_ok());
-        assert!(super::rules::whitespaces("  ").is_ok());
-        assert!(super::rules::whitespaces("    ").is_ok());
-        assert!(super::rules::whitespaces("a").is_err());
-    }
-
-    #[test]
-    fn some_whitespaces() {
-        assert!(super::rules::some_whitespaces("").is_err());
-        assert!(super::rules::some_whitespaces(" ").is_ok());
-        assert!(super::rules::some_whitespaces("  ").is_ok());
-        assert!(super::rules::some_whitespaces("    ").is_ok());
-        assert!(super::rules::some_whitespaces("a").is_err());
-    }
-
-    #[test]
     fn newline() {
         assert!(super::rules::newline("\n").is_ok());
         assert!(super::rules::newline("\r").is_ok());
@@ -167,55 +119,6 @@ mod test {
         assert!(super::rules::newline("\n\r").is_err());
         assert!(super::rules::newline("\n\n").is_err());
         assert!(super::rules::newline("a").is_err());
-    }
-
-    #[test]
-    fn newlines() {
-        assert!(super::rules::newlines("").is_ok());
-        assert!(super::rules::newlines("\n").is_ok());
-        assert!(super::rules::newlines("\n\n").is_ok());
-        assert!(super::rules::newlines("a").is_err());
-    }
-
-    #[test]
-    fn some_newlines() {
-        assert!(super::rules::some_newlines("").is_err());
-        assert!(super::rules::some_newlines("\n").is_ok());
-        assert!(super::rules::some_newlines("\n\n").is_ok());
-        assert!(super::rules::some_newlines("a").is_err());
-    }
-
-    #[test]
-    fn some_whitespaces_or_newline() {
-        assert!(super::rules::some_whitespaces_or_newline(" ").is_ok());
-        assert!(super::rules::some_whitespaces_or_newline("     ").is_ok());
-        assert!(super::rules::some_whitespaces_or_newline("\n").is_ok());
-        assert!(super::rules::some_whitespaces_or_newline(" \n").is_err());
-        assert!(super::rules::some_whitespaces_or_newline("\n ").is_err());
-        assert!(super::rules::some_whitespaces_or_newline("\n\n").is_err());
-        assert!(super::rules::some_whitespaces_or_newline("a").is_err());
-    }
-
-    #[test]
-    fn whitespaces_or_newlines() {
-        assert!(super::rules::whitespaces_or_newlines("").is_ok());
-        assert!(super::rules::whitespaces_or_newlines(" ").is_ok());
-        assert!(super::rules::whitespaces_or_newlines("\n").is_ok());
-        assert!(super::rules::whitespaces_or_newlines("\n ").is_ok());
-        assert!(super::rules::whitespaces_or_newlines("  ").is_ok());
-        assert!(super::rules::whitespaces_or_newlines("\n\n").is_ok());
-        assert!(super::rules::whitespaces_or_newlines("a").is_err());
-    }
-
-    #[test]
-    fn some_whitespaces_or_newlines() {
-        assert!(super::rules::some_whitespaces_or_newlines("").is_err());
-        assert!(super::rules::some_whitespaces_or_newlines(" ").is_ok());
-        assert!(super::rules::some_whitespaces_or_newlines("\n").is_ok());
-        assert!(super::rules::some_whitespaces_or_newlines("\n ").is_ok());
-        assert!(super::rules::some_whitespaces_or_newlines("  ").is_ok());
-        assert!(super::rules::some_whitespaces_or_newlines("\n\n").is_ok());
-        assert!(super::rules::some_whitespaces_or_newlines("a").is_err());
     }
 
     #[test]
@@ -596,9 +499,14 @@ mod test {
 
         assert!(super::rules::multiline("").is_err());
         assert!(super::rules::multiline("Hello, world!").is_err());
+        assert!(super::rules::multiline(" Hello, world!\n").is_err());
         assert!(super::rules::multiline("\nHello, world!\n").is_err());
         assert!(
             super::rules::multiline("Hello, world!\nThis is a test.\n\n")
+                .is_err()
+        );
+        assert!(
+            super::rules::multiline("Hello, world!\nThis is a test.\n \n")
                 .is_err()
         );
         assert!(super::rules::multiline("some\ntext\n\nover\nline").is_err());
