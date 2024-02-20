@@ -120,7 +120,7 @@ peg::parser! {
 
         /// Multiple lines.
         rule multiline() -> Vec<String>
-            = !((whitespace() / newline())+) lines:$((!newline() [_])+ newline()) ++ ()
+            = !(whitespace() / newline()) lines:$((!newline() [_])+ newline()) ++ ()
             {
                 lines
                     .iter()
