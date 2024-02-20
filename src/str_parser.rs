@@ -61,7 +61,7 @@ peg::parser! {
         /// Single subtitle entry.
         pub(crate) rule subtitle() -> SrtSubtitle
             = sequence:number() separator()
-                start:timestamp() whitespace()* "-->" whitespace()* end:timestamp() separator()
+                start:timestamp() separator()* "-->" separator()* end:timestamp() separator()
                 text:multiline()
             {
                 SrtSubtitle { sequence, start, end, text }
@@ -203,6 +203,15 @@ mod test {
         assert_eq!(
             srt_parser::subtitle(
                 "1 00:00:00,000 --> 00:00:01,000 Hello, world!\n"
+            )
+            .unwrap(),
+            subtitle
+        );
+
+        // Allow newline between timestamps.
+        assert_eq!(
+            srt_parser::subtitle(
+                "1\n00:00:00,000\n-->\n00:00:01,000\nHello, world!\n"
             )
             .unwrap(),
             subtitle
