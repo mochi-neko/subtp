@@ -13,7 +13,7 @@ or add the following line to your Cargo.toml:
 
 ```toml
 [dependencies]
-subtp = "0.1.0"
+subtp = "0.2.0"
 ```
 
 ## Features
@@ -63,6 +63,7 @@ let subrip = SubRip {
                 ..Default::default()
             },
             text: vec!["This is the first subtitle.".to_string()],
+            ..Default::default()
         },
         SrtSubtitle {
             sequence: 2,
@@ -78,6 +79,7 @@ let subrip = SubRip {
                 "This is the second subtitle.".to_string(),
                 "Subtitle text can span multiple lines.".to_string(),
             ],
+            ..Default::default()
         },
     ],
 };

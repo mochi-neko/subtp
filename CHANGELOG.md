@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2024-02-20
+
+### Added
+- Add timestamps conversion to `std::time::Duration` in `subtp::srt::SrtTimestamp` and `subtp::vtt::VttTimestamp`.
+- Add support for unofficial line position option in SubRip Subtitle format.
+
+### Changed
+- Ignore a line that has only whitespaces in `multiline` rule.
+- Remove unused codes for testing.
+
+### Fixed
+- Fix errors of document tests.
+
 ## [0.1.0] - 2024-02-11
 
 ### Added
